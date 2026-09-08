@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wine Sales Engine</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">W</div>
+      <div>
+        <div class="brand-name">Wine Sales</div>
+        <div class="brand-sub">ENGINE</div>
+      </div>
+    </div>
+    <nav>
+      <a class="active" href="#"><span>⌂</span> Dashboard</a>
+      <a href="#"><span>◎</span> Prospects</a>
+      <a href="#"><span>✦</span> Searches</a>
+      <a href="#"><span>✉</span> Outreach</a>
+      <a href="#"><span>◌</span> Signals</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="estate-card">
+        <div class="eyebrow">CURRENT ESTATE</div>
+        <strong>Château de Gensac</strong>
+        <span>Gers · France</span>
+      </div>
+      <a href="#"><span>⚙</span> Settings</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">COMMERCIAL INTELLIGENCE</div>
+        <h1>Good morning, Arthur.</h1>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn">⌕</button>
+        <div class="avatar">AP</div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <div class="eyebrow">AI PROSPECTING</div>
+        <h2>Find the buyers<br><em>worth your time.</em></h2>
+        <p>Discover, qualify and prioritize wine & spirits prospects using commercial fit, buying intent and market signals.</p>
+      </div>
+      <button class="primary" id="newSearch">＋ New search</button>
+    </section>
+
+    <section class="stats">
+      <div class="stat"><span>High priority</span><strong>27</strong><small>↑ 8 this week</small></div>
+      <div class="stat"><span>Prospects tracked</span><strong>327</strong><small>Across 4 markets</small></div>
+      <div class="stat"><span>Buying signals</span><strong>64</strong><small>Last 30 days</small></div>
+      <div class="stat"><span>Avg. opportunity</span><strong>78<span>/100</span></strong><small>+6 vs last search</small></div>
+    </section>
+
+    <section class="content-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">PRIORITY PIPELINE</div>
+            <h3>Prospects to contact</h3>
+          </div>
+          <button class="ghost">View all →</button>
+        </div>
+        <div id="prospects"></div>
+      </div>
+
+      <div class="panel signals-panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">LIVE SIGNALS</div>
+            <h3>Why now?</h3>
+          </div>
+        </div>
+        <div class="signal">
+          <div class="signal-dot hot"></div>
+          <div><strong>ABC VinS</strong><p>Adding new French domains · March 2026</p><span>Strong buying intent</span></div>
+        </div>
+        <div class="signal">
+          <div class="signal-dot"></div>
+          <div><strong>Vinicole Leloup</strong><p>Direct-import portfolio expanding</p><span>Portfolio signal</span></div>
+        </div>
+        <div class="signal">
+          <div class="signal-dot"></div>
+          <div><strong>Cave 1929</strong><p>Premium French wine focus detected</p><span>Fit signal</span></div>
+        </div>
+        <div class="signal">
+          <div class="signal-dot"></div>
+          <div><strong>De Wijncentrale</strong><p>Recent supplier activity</p><span>Activity signal</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <div class="panel search-panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">QUICK SEARCH</div>
+            <h3>Build a prospect list</h3>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label>Market<select id="market"><option>Belgium</option><option>France</option><option>United Kingdom</option><option>Switzerland</option></select></label>
+          <label>Prospect type<select id="type"><option>Importer / Distributor</option><option>Premium Caviste</option><option>Restaurant</option><option>Spirits Buyer</option></select></label>
+          <label>Products<select id="product"><option>Wine + Armagnac</option><option>Wine</option><option>Armagnac</option></select></label>
+        </div>
+        <button class="primary wide" id="runSearch">Find prospects</button>
+      </div>
+      <div class="panel methodology">
+        <div class="eyebrow">ENGINE LOGIC</div>
+        <h3>Opportunity Score</h3>
+        <div class="score-bars">
+          <div><span>Commercial potential</span><b>20%</b></div>
+          <div><span>Portfolio / product fit</span><b>15%</b></div>
+          <div><span>Buying intent</span><b>15%</b></div>
+          <div><span>Premium positioning</span><b>15%</b></div>
+          <div><span>New-brand openness</span><b>15%</b></div>
+        </div>
+        <p class="muted">The model will evolve from real commercial feedback rather than generic lead scoring.</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="modal">
+    <div class="modal-card">
+      <button class="close" id="close">×</button>
+      <div class="eyebrow">NEW SEARCH</div>
+      <h2>Tell the engine what you're looking for.</h2>
+      <p>These inputs will become the request sent to the research and qualification agents in the next build.</p>
+      <div class="modal-fields">
+        <label>Market<select><option>Belgium</option><option>France</option><option>United Kingdom</option></select></label>
+        <label>Target<select><option>Importers / distributors</option><option>Premium cavistes</option><option>Restaurants</option></select></label>
+        <label>Product focus<select><option>Wine + Armagnac</option><option>Wine</option><option>Armagnac</option></select></label>
+      </div>
+      <button class="primary wide" id="modalRun">Start research</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
