@@ -28,7 +28,7 @@ function renderCompanies(companies) {
     return;
   }
   const fragment = document.createDocumentFragment();
-  companies.forEach(company => {
+  [...companies].sort((a,b) => (scoreValue(b.opportunity_score) ?? -1) - (scoreValue(a.opportunity_score) ?? -1)).forEach(company => {
     const row = element('div', 'prospect');
     row.setAttribute('role', 'button');
     row.setAttribute('tabindex', '0');
@@ -86,9 +86,9 @@ function formatSignalType(value) {
     ? value.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase())
     : 'Signal';
 }
-function renderSignals(signals) {
+function renderSignals(signals, count = signals.length) {
   liveSignals.replaceChildren();
-  document.getElementById('signalCount').textContent = signals.length;
+  document.getElementById('signalCount').textContent = count;
   if (!signals.length) {
     liveSignals.append(element('p', 'data-state', 'No buying signals detected yet.'));
     return;
@@ -101,7 +101,7 @@ function renderSignals(signals) {
     const body = element('div', '');
     body.append(element('strong', '', signal.company_name || 'Unknown company'));
     body.append(element('p', '', signal.description || 'Signal details unavailable'));
-    const label = [formatSignalType(signal.signal_type), strength === null ? null : `${strength}/100`].filter(Boolean).join(' · ');
+    const label = [formatSignalType(signal.signal_type), signal.signal_date || 'Date unknown', strength === null ? null : `${strength}/100`].filter(Boolean).join(' · ');
     body.append(element('span', '', label));
     item.append(dot, body);
     if (signal.company_id) {
@@ -129,7 +129,7 @@ async function loadSignals() {
     const response = await fetch('/api/signals', { signal: controller.signal, cache: 'no-store' });
     const data = await response.json();
     if (!response.ok || data.success !== true || !Array.isArray(data.signals)) throw new Error();
-    renderSignals(data.signals);
+    renderSignals(data.signals, data.count);
   } catch {
     const state = element('div', 'data-state');
     state.append(element('p', '', 'Buying signals could not be loaded.'));
@@ -149,9 +149,7 @@ loadSignals();
 const modal = document.getElementById('modal');
 document.getElementById('newSearch').onclick = () => modal.classList.remove('hidden');
 document.getElementById('close').onclick = () => modal.classList.add('hidden');
-const searchUnavailable = () => alert('Prospect research is not connected yet. No search has been queued.');
-document.getElementById('modalRun').onclick = searchUnavailable;
-document.getElementById('runSearch').onclick = searchUnavailable;
+
 
 const drawer = document.getElementById('prospectDrawer');
 const detailBody = document.getElementById('detailBody');
@@ -215,8 +213,8 @@ function renderDetail({company, contacts, signals}) {
   if (!contacts.length) people.append(element('p', 'detail-note', 'Decision maker not identified yet.'));
   contacts.forEach(contact => {
     const card = element('dl', 'detail-grid detail-card');
-    for (const [label, key] of [['Full name','full_name'], ['Job title','job_title'], ['Email','email'], ['Phone','phone'], ['LinkedIn','linkedin_url']]) {
-      detailField(card, label, contact[key], key === 'linkedin_url');
+    for (const [label, key] of [['Full name','full_name'], ['Job title','job_title'], ['Email','email'], ['Phone','phone'], ['LinkedIn','linkedin_url'], ['Source','source']]) {
+      detailField(card, label, contact[key], key === 'linkedin_url' || key === 'source');
     }
     detailField(card, 'Confidence', metric(contact.confidence));
     people.append(card);

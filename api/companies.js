@@ -1,3 +1,4 @@
+import {boundedJSON} from '../lib/http.js';
 // Only fields used by this dashboard are exposed by this public, read-only route.
 const fields = ['id', 'name', 'country', 'city', 'company_type', 'description',
   'buying_intent', 'opportunity_score'];
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
       const url = new URL('/rest/v1/companies', base);
       url.searchParams.set('select', fields.join(','));
       url.searchParams.set('order', 'id.asc');
-      url.searchParams.set('limit', '500');
+      url.searchParams.set('limit', '50');
       url.searchParams.set('offset', String(companies.length));
       const response = await fetch(url, {
         headers: { apikey: key, Accept: 'application/json' },
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
           ? 'Database access failed. Check the deployed project URL, secret key and table permissions.'
           : 'Unable to retrieve companies from the database.');
       }
-      const rows = await response.json();
+      const rows = await boundedJSON(response, 1500000);
       if (!Array.isArray(rows) || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
         return fail(502, 'INVALID_DATABASE_RESPONSE', 'The database returned an unexpected response.');
       }

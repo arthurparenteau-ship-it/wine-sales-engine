@@ -43,7 +43,7 @@ test('detail endpoint boundaries', async t => {
   await t.test('related rows paginate and only allowlisted fields escape', async () => {
     globalThis.fetch=async url=>{
       if(url.pathname.endsWith('/companies')) return Response.json([{id}]);
-      if(url.searchParams.get('offset')==='0') return Response.json([{full_name:'<script>literal</script>',signal_type:'Portfolio',company_id:'private',source:'private'}]);
+      if(url.searchParams.get('offset')==='0') return Response.json([{full_name:'<script>literal</script>',signal_type:'Portfolio',company_id:'private',source:'https://example.com/source'}]);
       return Response.json([]);
     };
     const {body}=await invoke(); assert.equal(body.contacts.length,1);assert.equal(body.signals.length,1);

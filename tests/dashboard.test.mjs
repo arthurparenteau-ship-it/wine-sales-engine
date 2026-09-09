@@ -17,7 +17,7 @@ class Node {
 }
 function setup(fetch) {
   const nodes = new Map();
-  const context = vm.createContext({ fetch, URL, AbortController, setTimeout, clearTimeout, alert(){}, document:{
+  const context = vm.createContext({ fetch: (url,options) => url === '/api/signals' ? Promise.resolve(Response.json({success:true,count:0,signals:[]})) : fetch(url,options), URL, AbortController, setTimeout, clearTimeout, alert(){}, document:{
     createElement: () => new Node(), createDocumentFragment: () => new Node(),
     getElementById: id => { if (!nodes.has(id)) nodes.set(id, new Node()); return nodes.get(id); }
   }});
@@ -92,4 +92,15 @@ test('stale detail responses cannot overwrite newer selection; error retry recov
   await nodes.get('detailBody').children[1].click();
   assert.ok(textOf(nodes.get('detailBody')).includes('<b>Literal</b>'));
   assert.ok(textOf(nodes.get('detailBody')).includes('Stored signal'));
+});
+
+test('live signal count is independent of visible rows; click opens its dossier safely',async()=>{
+ const {nodes,context}=setup(async()=>Response.json({success:true,companies:[]}));await tick();
+ vm.runInContext("renderSignals([{company_id:'signal-company',company_name:'<img src=x>',description:'<script>unsafe</script>',strength:90}],1200)",context);
+ assert.equal(nodes.get('signalCount').textContent,1200);
+ const item=nodes.get('liveSignals').children[0].children[0];
+ assert.ok(textOf(item).includes('<script>unsafe</script>'));assert.equal(item.attributes.role,'button');
+ let called;
+ context.fetch=async url=>{called=url;return Response.json({success:true,company:{id:'signal-company',name:'Merchant'},contacts:[],signals:[]});};
+ item.click();await tick();assert.equal(called,'/api/company?id=signal-company');assert.equal(nodes.get('prospectDrawer').open,true);
 });

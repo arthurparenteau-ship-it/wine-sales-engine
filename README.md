@@ -1,66 +1,93 @@
 # Wine Sales Engine
 
-Vanilla HTML/CSS/JavaScript dashboard with a Vercel Node.js function reading existing Supabase companies. No build step, runtime dependencies, schema changes, or AI processing.
+Wine and spirits commercial prioritization: vanilla HTML/CSS/JS, Vercel Node.js functions, Supabase/PostgreSQL. No framework migration, LLM scoring, outbound messaging, or new runtime dependencies.
 
-## Architecture
+## Implemented
 
-Browser → GET /api/companies → Supabase REST /rest/v1/companies.
+- Supabase pipeline sorted by stored Opportunity Score (unknown last).
+- Responsive company dossier with six metrics, contacts, signals, source links, and rule-based next action.
+- Quick Search and New Search use the same validated search API.
+- Persistent pending → running → completed/failed lifecycle, recent search history, retry, safe request replay, and dashboard refresh.
+- Provider adapter, conservative evidence verification, normalization, deduplication, deterministic scoring and atomic company/contact/signal persistence.
+- Real Brave Search adapter and local-only evidence-file adapter. No fallback demo generation.
+- Database-backed live signals and exact total (research/scoring provenance is excluded from the buying-signal count).
 
-`api/companies.js` uses Vercel's default-export `(req, res)` handler. The server sends the modern secret key only in `apikey`, never as a JWT bearer token. The original handler already used this header correctly; an earlier "Invalid API key" cannot be diagnosed from source alone.
+## Architecture / lifecycle
 
-The route allows GET only, validates configuration, uses an eight-second overall database timeout, disables redirects and caching, pages through rows in ID order, and returns safe JSON errors without upstream bodies or exception details. Multiple page reads are not a transactional snapshot if records change during loading.
+Browser → `POST /api/search` → atomic request claim → provider → normalization → evidence checks → batch dedup → qualification/scoring → atomic database import + completion → dashboard refresh.
 
-Success: `{ "success": true, "count": 0, "companies": [] }`.
-Failure: `{ "success": false, "error": { "code": "...", "message": "..." } }` with HTTP 405, 500 (configuration), 502 (database), or 504 (timeout).
+This release runs bounded research synchronously within the POST request; it does not enqueue work that depends on a serverless process surviving after response. Status/history reads show persisted state while POST runs. Search budget is 35 seconds, individual database requests 10 seconds, cleanup is bounded; Vercel function maxDuration is 60 seconds. Interrupted pending/running searches older than two minutes become failed on the next history/status read or submission. No cron is required. Future high-volume research needs a durable job runner.
 
-The public response includes only existing dashboard fields: id, name, country, city, company_type, description, buying_intent, opportunity_score. The list route queries only companies. The detail route also reads related contacts and signals; outreach and unrelated tables are never queried. The dashboard displays stored scores without calculating a new prioritization model; missing scores remain unknown. Demo companies, signals and totals have been removed. Research controls remain explicitly unavailable.
+A request UUID makes network retries replay the same search without duplicate execution. Explicit retry of a failed search creates a new UUID. Database admission is serialized: one active search project-wide, ten new searches per hour. These conservative global limits bound anonymous usage; they are not user authentication. Import and completion run in one transaction, so failed imports cannot leave partial prospects.
 
-## Vercel / Supabase configuration
+## API
 
-- Repository root must be the Vercel Root Directory, with framework preset Other and no framework build step. Root `api/companies.js` must be deployed as a Node.js function, not exported as a static asset.
-- Set `SUPABASE_URL` to the HTTPS project origin and `SUPABASE_SECRET_KEY` to an active `sb_secret_` key from that same project. Values must not have surrounding quotes. Leading/trailing whitespace is trimmed.
-- Production variables only apply to Production. Configure Preview/Development separately if those environments need database access. Redeploy after changing environment values.
-- Confirm the Supabase Data API is enabled, `public.companies` is exposed, and the server role can select its existing columns. No schema changes or weakened RLS policies are required.
-- For `SUPABASE_ACCESS_ERROR`, check the matching URL/key, whether the key was revoked, environment scope, and a fresh deployment. Server logs include only upstream HTTP status.
-- Keep secrets in Vercel or a local ignored environment file, never in frontend files. `.env*`, `.vercel`, and dependencies are ignored.
+| Route | Methods | Behavior |
+|---|---|---|
+| `/api/companies` | GET | Company list, selected dashboard fields |
+| `/api/company?id=<uuid>` | GET | Company + related contacts/signals |
+| `/api/signals` | GET | Up to 50 strongest signals, date tie-breaker, exact total |
+| `/api/search` | POST | Validate, persist and execute a search |
+| `/api/search?id=<uuid>` | GET | Persisted search details/status/metrics |
+| `/api/searches` | GET | Latest 20 searches and provider availability |
+
+POST requires JSON with exactly `market`, `prospect_type`, `product_focus`, `request_id` (UUID). Supported markets: Belgium, France, United Kingdom, Switzerland. Types: Importer / Distributor, Premium Caviste, Restaurant, Spirits Buyer. Products: Wine + Armagnac, Wine, Armagnac. Input limit: 2 KB. Provider-unavailable attempts create a failed search and return 503; empty verified results are a legitimate completed search with zero prospects. A 202 replay means the original request is still pending/running; inspect status/history.
+
+All APIs use no-store. Errors are stable codes and safe messages, never raw database/provider bodies. Logs contain only search ID, stage, provider identifier and numeric counts.
+
+## Configuration
+
+Existing server variables: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (modern secret key, sent only as the server `apikey` header).
+
+For autonomous discovery configure these **server-side Vercel environment variables** and redeploy:
+
+- `RESEARCH_PROVIDER=brave`
+- `BRAVE_SEARCH_API_KEY`: an active Brave Web Search API subscription key. Obtain from the Brave API dashboard; never paste it into source, browser code or logs. Choose a subscription whose terms allow the intended storage of result excerpts.
+
+No provider key is bundled. A connected assistant web-search tool is not available inside Vercel functions. If these variables are absent, history and the POST failure explicitly say provider unavailable. Supabase setup alone cannot provide web discovery.
+
+Local evidence mode: `RESEARCH_PROVIDER=evidence-file`, `RESEARCH_EVIDENCE_FILE=/absolute/path/to/verified-evidence.json`. It is disabled when `VERCEL` is set or NODE_ENV is production. The file must contain your real, reviewed public-source excerpts following [the provider contract](docs/research.md); no fixture dataset ships as a production provider.
+
+## Database migrations
+
+Versioned SQL is in `supabase/migrations/`. The search migration adds only request_id, updated_at, error_code and metrics to searches, plus indexes and transactional helper functions. The second migration adds a signal count function. Existing companies, contacts and signals are not modified by migrations. New functions are SECURITY INVOKER with fixed search_path, revoked from PUBLIC/anon/authenticated, executable by service_role. Existing RLS is preserved.
+
+Apply migrations before deploying the new endpoints. They were applied to the connected project for this release; do not rerun the same SQL manually. Helper functions are not public SQL proxies and accept only structured application arguments.
+
+## Evidence, scoring, deduplication
+
+See [research rules and provider contract](docs/research.md) for exact weights, thresholds, acceptance rules and limits. Missing facts remain null. A total is generated only when all scoring dimensions have evidence. Existing populated scores are preserved; candidate calculations are recorded separately as scoring evidence. No premium positioning, capacity, openness, organic or terroir metric is invented.
+
+Canonical domain ignores HTTP/HTTPS, www, case, path and trailing slash. Database matching prefers domain; normalized name + country is used only when one domain is absent. Serialized imports prevent duplicates across simultaneous pipeline calls. External/manual database writers must use equivalent checks. Existing data is never deleted; populated fields and existing contacts are preserved. New verified missing company values and previously unseen evidence/contacts are appended transactionally. Ambiguous same-name companies with different domains remain separate.
 
 ## Security boundary
 
-Authentication is deliberately out of scope. This endpoint is public and reads with elevated server privileges that bypass RLS; anyone able to reach it can read the listed company fields. Do not assume RLS protects these returned fields. Use deployment access protection if the current company data must remain private. No writes or caller-supplied database queries are accepted. Database text is rendered using DOM textContent to prevent HTML/script injection.
+The application still has no authentication. Read endpoints expose their allowlisted fields (including contact details) publicly through server privileges that bypass RLS. The search endpoint can create bounded searches and verified imports; it is not a generic database proxy. Use Vercel deployment access protection for private commercial data. Origin checks block cross-site browser POSTs but do not authenticate direct API clients. Global database-backed limits bound provider spending; a future authenticated workspace is required for multi-user production.
 
-## Checks and verification
+No candidate website is fetched by the server. The only external research request is to a hardcoded HTTPS Brave API endpoint with redirects disabled. Citation URLs reject non-HTTP(S), credentials, IP literals, local names, nonstandard ports and whitespace; validation is not permission to fetch them. A future crawler must add DNS/IP pinning, private-address rejection and redirect revalidation. Provider responses are capped at 512 KB; database responses at 1.5 MB. The browser uses DOM/textContent, with validated HTTP(S) links and noopener/noreferrer. No arbitrary SQL, table, column, provider URL or filter is accepted from a client.
 
-Run with a modern Node.js installation:
+## Local checks
+
+Requires Node 22+ (built-in fetch, AbortSignal, node:test). No dependencies to install:
 
 ```
-node --check api/companies.js
-node --check app.js
 node --test tests/*.test.mjs
+node --env-file=.env.local scripts/dev.mjs
 ```
 
-Tests mock Supabase and need no credentials. To exercise Vercel routing locally, use `vercel dev` with locally configured server variables; a static file server cannot execute `/api/companies`.
+Use an ignored `.env.local` with server variables, or run the dev server without it to test missing configuration. Open http://127.0.0.1:3000. Never commit .env files. The developer server exposes only exact application routes/assets.
 
-After deploying:
-1. Visit `https://YOUR-DEPLOYMENT/api/companies`. Expect HTTP 200 and the success envelope with actual companies or an empty array.
-2. Open the dashboard and inspect Network: it should fetch only the same-origin companies endpoint, without Supabase credentials. Verify row count and stored scores against Supabase.
-3. An empty table should show the empty state. Block the API request in browser devtools and reload to verify error/Retry; unblock and retry to recover.
-4. Check mobile layout, and ensure missing scores appear as a dash rather than zero.
+Automated tests mock provider/database responses and do not generate production prospects. The rollback-only PostgreSQL integration check in `tests/database.sql` verifies request replay, import, repeated-search dedup, preservation of existing data, and function privileges. It was run on the connected database without retaining fixture rows.
 
-Live credentials and deployment settings are not included in this repository; mocked tests do not verify production connectivity.
+## Production verification
 
-References: https://supabase.com/docs/guides/getting-started/api-keys and https://vercel.com/docs/functions/runtimes/node-js
+1. Confirm Vercel deployed the latest main commit and the existing Supabase variables remain configured.
+2. Check `/api/companies`, `/api/signals`, `/api/searches`; open a dossier and inspect stored sources.
+3. Submit Belgium / Importer / Distributor / Wine + Armagnac. Confirm a real search record and its outcome in history.
+4. Without a provider key, expect persisted failed + PROVIDER_UNAVAILABLE, no added companies. With a key, expect only evidence-accepted prospects or a legitimate zero-result completion.
+5. Retry the same request UUID: no extra search/import. Retry failed research using the UI: new search record.
+6. Check counts, descending score order, recent history, drawer, mobile layout and console. API methods/invalid inputs must return safe 4xx errors.
 
+## Planned, not implemented
 
-## Prospect dossier
-
-Click a company row (or focus it and press Enter/Space) to open a responsive native-dialog side drawer. Close or Escape returns focus to the company. Opening another company cancels the previous request, and stale responses cannot replace the current dossier.
-
-`GET /api/company?id=<company UUID>` returns `{ success: true, company, contacts: [], signals: [] }`. The existing `/api/companies` route is unchanged. The new route validates a single UUID, uses fixed field allowlists and filters contacts/signals by `company_id`, pages related records, and returns 400 for invalid IDs, 404 for missing companies, 405 for non-GET methods, and sanitized 500/502/504 failures. Responses use no-store caching and an eight-second database timeout.
-
-The drawer shows the company overview, six stored commercial scores, available contacts and signals, and Unknown or explicit empty states for missing information. The recommended action is rule-based, not AI-generated: 85+ Contact now, 70–84 Qualify and contact, below 70 Monitor, null Needs qualification. No scores are recalculated or data written.
-
-All database text uses textContent. Only absolute HTTP/HTTPS URLs without credentials or whitespace become links, with noopener/noreferrer. Email and phone are plain text. Dialog focus containment and Escape handling use the browser's native dialog behavior.
-
-**Access limitation:** Authentication remains out of scope. The detail endpoint is public and exposes its allowlisted contact details and signals to anyone with a company ID, using server privileges that bypass RLS. Deployment access protection is needed if this data must be private. This implementation changes no database schema, rows, policies, or permissions.
-
-Production checks: open ABC VinS, verify the detail request and empty contacts/signals, close with Escape, repeat for the other companies, inspect the browser console, and verify invalid/unknown UUID and non-GET HTTP responses. Tests cover list loading, detail selection, empty/populated relations, literal HTML, URL validation, score boundaries, retry and stale-response handling, filtering, allowlists, errors and timeouts.
+Durable background jobs, broad crawling, richer multilingual entity extraction, manually reviewed evidence changes, automatic refreshing of reviewed scores, authentication/tenancy, CRM/billing/outreach. The initial adapter intentionally favors false negatives over unsupported claims.

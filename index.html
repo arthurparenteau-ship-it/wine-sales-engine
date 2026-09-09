@@ -102,14 +102,19 @@
         <div class="eyebrow">ENGINE LOGIC</div>
         <h3>Opportunity Score</h3>
         <div class="score-bars">
-          <div><span>Commercial potential</span><b>20%</b></div>
-          <div><span>Portfolio / product fit</span><b>15%</b></div>
-          <div><span>Buying intent</span><b>15%</b></div>
-          <div><span>Premium positioning</span><b>15%</b></div>
-          <div><span>New-brand openness</span><b>15%</b></div>
+          <div><span>Commercial potential</span><b>40%</b></div>
+          <div><span>Product fit</span><b>30%</b></div>
+          <div><span>Dated buying intent</span><b>20%</b></div>
+          <div><span>Verified accessibility</span><b>10%</b></div>
         </div>
-        <p class="muted">The model will evolve from real commercial feedback rather than generic lead scoring.</p>
+        <p class="muted">Evidence rules v1. Overall score remains unknown until all four dimensions have evidence. Existing reviewed scores are preserved.</p>
       </div>
+    </section>
+    <section class="panel recent-searches" id="searchHistoryPanel">
+      <div class="panel-head"><div><div class="eyebrow">RESEARCH ACTIVITY</div><h3>Recent searches</h3></div><button class="ghost" id="refreshSearches">Refresh</button></div>
+      <p class="detail-note" id="providerState">Checking research provider…</p>
+      <div id="searchStatus" role="status" aria-live="polite"></div>
+      <div id="recentSearches" aria-live="polite">Loading recent searches…</div>
     </section>
   </main>
 
@@ -118,11 +123,11 @@
       <button class="close" id="close">×</button>
       <div class="eyebrow">NEW SEARCH</div>
       <h2>Tell the engine what you're looking for.</h2>
-      <p>These inputs will become the request sent to the research and qualification agents in the next build.</p>
+      <p>Research public sources and qualify evidence-backed prospects. Missing information stays unknown.</p>
       <div class="modal-fields">
-        <label>Market<select><option>Belgium</option><option>France</option><option>United Kingdom</option></select></label>
-        <label>Target<select><option>Importers / distributors</option><option>Premium cavistes</option><option>Restaurants</option></select></label>
-        <label>Product focus<select><option>Wine + Armagnac</option><option>Wine</option><option>Armagnac</option></select></label>
+        <label>Market<select id="modalMarket"><option>Belgium</option><option>France</option><option>United Kingdom</option><option>Switzerland</option></select></label>
+        <label>Target<select id="modalType"><option>Importer / Distributor</option><option>Premium Caviste</option><option>Restaurant</option><option>Spirits Buyer</option></select></label>
+        <label>Product focus<select id="modalProduct"><option>Wine + Armagnac</option><option>Wine</option><option>Armagnac</option></select></label>
       </div>
       <button class="primary wide" id="modalRun">Start research</button>
     </div>
@@ -137,5 +142,6 @@
   </dialog>
 
   <script src="app.js"></script>
+  <script src="public-js/search.js"></script>
 </body>
 </html>

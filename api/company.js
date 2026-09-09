@@ -1,7 +1,8 @@
+import {boundedJSON} from '../lib/http.js';
 // Only fields used by this dashboard are exposed by this public, read-only route.
 const companyFields = ['id', 'name', 'country', 'city', 'company_type', 'description',
   'website', 'buying_intent', 'opportunity_score', 'commercial_potential', 'wine_fit', 'armagnac_fit', 'accessibility'];
-const contactFields = ['full_name', 'job_title', 'email', 'phone', 'linkedin_url', 'confidence'];
+const contactFields = ['full_name', 'job_title', 'email', 'phone', 'linkedin_url', 'confidence', 'source'];
 const signalFields = ['signal_type', 'description', 'signal_date', 'strength', 'source_url'];
 
 export default async function handler(req, res) {
@@ -40,14 +41,14 @@ export default async function handler(req, res) {
         url.searchParams.set('select', fields.join(','));
         url.searchParams.set(filter, `eq.${id}`);
         url.searchParams.set('order', 'id.asc');
-        url.searchParams.set('limit', single ? '1' : '500');
+        url.searchParams.set('limit', single ? '1' : '50');
         url.searchParams.set('offset', String(result.length));
         const response = await fetch(url, {
           headers: { apikey: key, Accept: 'application/json' },
           signal: controller.signal, redirect: 'error'
         });
         if (!response.ok) throw new Error('Database query failed');
-        const rows = await response.json();
+        const rows = await boundedJSON(response, 1500000);
         if (!Array.isArray(rows) || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
           throw new Error('Invalid database response');
         }
