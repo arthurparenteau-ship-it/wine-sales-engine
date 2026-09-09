@@ -1,4 +1,5 @@
 const container = document.getElementById('prospects');
+const liveSignals = document.getElementById('liveSignals');
 const element = (tag, className, text) => {
   const node = document.createElement(tag);
   node.className = className;
@@ -79,7 +80,71 @@ async function loadCompanies() {
     container.setAttribute('aria-busy', 'false');
   }
 }
+
+function formatSignalType(value) {
+  return typeof value === 'string' && value.trim()
+    ? value.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase())
+    : 'Signal';
+}
+function renderSignals(signals) {
+  liveSignals.replaceChildren();
+  document.getElementById('signalCount').textContent = signals.length;
+  if (!signals.length) {
+    liveSignals.append(element('p', 'data-state', 'No buying signals detected yet.'));
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  signals.slice(0, 6).forEach(signal => {
+    const item = element('div', 'signal');
+    const strength = scoreValue(signal.strength);
+    const dot = element('div', strength !== null && strength >= 85 ? 'signal-dot hot' : 'signal-dot');
+    const body = element('div', '');
+    body.append(element('strong', '', signal.company_name || 'Unknown company'));
+    body.append(element('p', '', signal.description || 'Signal details unavailable'));
+    const label = [formatSignalType(signal.signal_type), strength === null ? null : `${strength}/100`].filter(Boolean).join(' · ');
+    body.append(element('span', '', label));
+    item.append(dot, body);
+    if (signal.company_id) {
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.addEventListener('click', () => openCompany(signal.company_id, item));
+      item.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openCompany(signal.company_id, item);
+        }
+      });
+    }
+    fragment.append(item);
+  });
+  liveSignals.append(fragment);
+}
+async function loadSignals() {
+  liveSignals.setAttribute('aria-busy', 'true');
+  liveSignals.replaceChildren(element('p', 'data-state', 'Loading buying signals…'));
+  document.getElementById('signalCount').textContent = '—';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch('/api/signals', { signal: controller.signal, cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok || data.success !== true || !Array.isArray(data.signals)) throw new Error();
+    renderSignals(data.signals);
+  } catch {
+    const state = element('div', 'data-state');
+    state.append(element('p', '', 'Buying signals could not be loaded.'));
+    const retry = element('button', 'action', 'Retry');
+    retry.addEventListener('click', loadSignals);
+    state.append(retry);
+    liveSignals.replaceChildren(state);
+  } finally {
+    clearTimeout(timer);
+    liveSignals.setAttribute('aria-busy', 'false');
+  }
+}
+
 loadCompanies();
+loadSignals();
 
 const modal = document.getElementById('modal');
 document.getElementById('newSearch').onclick = () => modal.classList.remove('hidden');
