@@ -54,10 +54,10 @@
     </section>
 
     <section class="stats">
-      <div class="stat"><span>High priority</span><strong>27</strong><small>↑ 8 this week</small></div>
-      <div class="stat"><span>Prospects tracked</span><strong>327</strong><small>Across 4 markets</small></div>
-      <div class="stat"><span>Buying signals</span><strong>64</strong><small>Last 30 days</small></div>
-      <div class="stat"><span>Avg. opportunity</span><strong>78<span>/100</span></strong><small>+6 vs last search</small></div>
+      <div class="stat"><span>Prospects scored</span><strong id="scoredCount">—</strong><small>With a stored opportunity score</small></div>
+      <div class="stat"><span>Prospects tracked</span><strong id="trackedCount">—</strong><small id="marketCount">Waiting for companies</small></div>
+      <div class="stat"><span>Buying signals</span><strong>—</strong><small>Signals not connected yet</small></div>
+      <div class="stat"><span>Avg. opportunity</span><strong><b id="averageScore">—</b><span>/100</span></strong><small>Average of stored scores</small></div>
     </section>
 
     <section class="content-grid">
@@ -65,11 +65,11 @@
         <div class="panel-head">
           <div>
             <div class="eyebrow">PRIORITY PIPELINE</div>
-            <h3>Prospects to contact</h3>
+            <h3>Company prospects</h3>
           </div>
-          <button class="ghost">View all →</button>
+          <span class="muted">All companies</span>
         </div>
-        <div id="prospects"></div>
+        <div id="prospects" role="status" aria-live="polite" aria-busy="true"><p class="data-state">Loading companies…</p></div>
       </div>
 
       <div class="panel signals-panel">
@@ -79,22 +79,7 @@
             <h3>Why now?</h3>
           </div>
         </div>
-        <div class="signal">
-          <div class="signal-dot hot"></div>
-          <div><strong>ABC VinS</strong><p>Adding new French domains · March 2026</p><span>Strong buying intent</span></div>
-        </div>
-        <div class="signal">
-          <div class="signal-dot"></div>
-          <div><strong>Vinicole Leloup</strong><p>Direct-import portfolio expanding</p><span>Portfolio signal</span></div>
-        </div>
-        <div class="signal">
-          <div class="signal-dot"></div>
-          <div><strong>Cave 1929</strong><p>Premium French wine focus detected</p><span>Fit signal</span></div>
-        </div>
-        <div class="signal">
-          <div class="signal-dot"></div>
-          <div><strong>De Wijncentrale</strong><p>Recent supplier activity</p><span>Activity signal</span></div>
-        </div>
+        <p class="data-state">Signals are not connected yet. Company data is available in the pipeline.</p>
       </div>
     </section>
 
