@@ -56,7 +56,7 @@
     <section class="stats">
       <div class="stat"><span>Prospects scored</span><strong id="scoredCount">—</strong><small>With a stored opportunity score</small></div>
       <div class="stat"><span>Prospects tracked</span><strong id="trackedCount">—</strong><small id="marketCount">Waiting for companies</small></div>
-      <div class="stat"><span>Buying signals</span><strong>—</strong><small>Signals not connected yet</small></div>
+      <div class="stat"><span>Buying signals</span><strong id="signalCount">—</strong><small>Live signals in database</small></div>
       <div class="stat"><span>Avg. opportunity</span><strong><b id="averageScore">—</b><span>/100</span></strong><small>Average of stored scores</small></div>
     </section>
 
@@ -79,7 +79,7 @@
             <h3>Why now?</h3>
           </div>
         </div>
-        <p class="data-state">Signals are not connected yet. Company data is available in the pipeline.</p>
+        <div id="liveSignals" role="status" aria-live="polite" aria-busy="true"><p class="data-state">Loading buying signals…</p></div>
       </div>
     </section>
 
