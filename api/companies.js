@@ -5,13 +5,14 @@ export default async function handler(req, res) {
       {
         headers: {
           apikey: process.env.SUPABASE_SECRET_KEY,
-          Authorization: `Bearer ${process.env.SUPABASE_SECRET_KEY}`,
+          "Content-Type": "application/json",
         },
       }
     );
 
     if (!response.ok) {
       const error = await response.text();
+
       return res.status(response.status).json({
         error: error,
       });
