@@ -21,3 +21,18 @@ nav{display:grid;gap:5px}nav a,.sidebar-bottom>a{color:#aaa;text-decoration:none
 
 .data-state{font-size:13px;line-height:1.6;color:var(--muted);padding:16px 0;border-top:1px solid var(--line)}
 .company,.meta{overflow-wrap:anywhere}
+
+.prospect[role="button"]{cursor:pointer;border-radius:6px;transition:background .15s}
+.prospect[role="button"]:hover{background:#f6f5f0}
+.prospect[role="button"]:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.prospect-drawer{position:fixed;inset:0 0 0 auto;margin:0;width:min(640px,100%);max-width:100%;height:100dvh;max-height:100dvh;border:0;border-left:1px solid var(--line);padding:0 32px 32px;background:var(--bg);color:var(--ink);box-shadow:-12px 0 50px #20211f25;overflow-y:auto}
+.prospect-drawer::backdrop{background:rgba(20,21,19,.55)}
+body:has(.prospect-drawer[open]){overflow:hidden}
+.drawer-head{display:flex;gap:20px;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);padding:26px 0 20px;border-bottom:1px solid var(--line);z-index:1}
+.drawer-head h2{font-size:30px;overflow-wrap:anywhere}.drawer-head .action{flex-shrink:0}
+.detail-section{padding:22px 0;border-bottom:1px solid var(--line)}
+.detail-section h3{font-size:16px}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:18px 0 0}
+.detail-field{min-width:0;overflow-wrap:anywhere}.detail-field dt{font-size:10px;color:var(--muted);margin-bottom:6px}.detail-field dd{margin:0;font-size:13px;line-height:1.5}.detail-field a{color:var(--accent);text-underline-offset:3px}
+.metrics .detail-field{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:14px}.metrics dd{font-weight:700;font-size:21px}
+.detail-description{font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}.detail-note{font-size:12px;color:var(--muted);line-height:1.6}.next-action{font-size:20px;font-weight:700;color:var(--accent);margin-bottom:8px}.detail-card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:16px}
+@media(max-width:650px){.prospect-drawer{padding:0 20px 24px}.drawer-head h2{font-size:26px}.detail-card{grid-template-columns:1fr}}

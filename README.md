@@ -13,7 +13,7 @@ The route allows GET only, validates configuration, uses an eight-second overall
 Success: `{ "success": true, "count": 0, "companies": [] }`.
 Failure: `{ "success": false, "error": { "code": "...", "message": "..." } }` with HTTP 405, 500 (configuration), 502 (database), or 504 (timeout).
 
-The public response includes only existing dashboard fields: id, name, country, city, company_type, description, buying_intent, opportunity_score. No contacts, outreach, or other tables are queried. The dashboard displays stored scores without calculating a new prioritization model; missing scores remain unknown. Demo companies, signals and totals have been removed. Research controls remain explicitly unavailable.
+The public response includes only existing dashboard fields: id, name, country, city, company_type, description, buying_intent, opportunity_score. The list route queries only companies. The detail route also reads related contacts and signals; outreach and unrelated tables are never queried. The dashboard displays stored scores without calculating a new prioritization model; missing scores remain unknown. Demo companies, signals and totals have been removed. Research controls remain explicitly unavailable.
 
 ## Vercel / Supabase configuration
 
@@ -49,3 +49,18 @@ After deploying:
 Live credentials and deployment settings are not included in this repository; mocked tests do not verify production connectivity.
 
 References: https://supabase.com/docs/guides/getting-started/api-keys and https://vercel.com/docs/functions/runtimes/node-js
+
+
+## Prospect dossier
+
+Click a company row (or focus it and press Enter/Space) to open a responsive native-dialog side drawer. Close or Escape returns focus to the company. Opening another company cancels the previous request, and stale responses cannot replace the current dossier.
+
+`GET /api/company?id=<company UUID>` returns `{ success: true, company, contacts: [], signals: [] }`. The existing `/api/companies` route is unchanged. The new route validates a single UUID, uses fixed field allowlists and filters contacts/signals by `company_id`, pages related records, and returns 400 for invalid IDs, 404 for missing companies, 405 for non-GET methods, and sanitized 500/502/504 failures. Responses use no-store caching and an eight-second database timeout.
+
+The drawer shows the company overview, six stored commercial scores, available contacts and signals, and Unknown or explicit empty states for missing information. The recommended action is rule-based, not AI-generated: 85+ Contact now, 70–84 Qualify and contact, below 70 Monitor, null Needs qualification. No scores are recalculated or data written.
+
+All database text uses textContent. Only absolute HTTP/HTTPS URLs without credentials or whitespace become links, with noopener/noreferrer. Email and phone are plain text. Dialog focus containment and Escape handling use the browser's native dialog behavior.
+
+**Access limitation:** Authentication remains out of scope. The detail endpoint is public and exposes its allowlisted contact details and signals to anyone with a company ID, using server privileges that bypass RLS. Deployment access protection is needed if this data must be private. This implementation changes no database schema, rows, policies, or permissions.
+
+Production checks: open ABC VinS, verify the detail request and empty contacts/signals, close with Escape, repeat for the other companies, inspect the browser console, and verify invalid/unknown UUID and non-GET HTTP responses. Tests cover list loading, detail selection, empty/populated relations, literal HTML, URL validation, score boundaries, retry and stale-response handling, filtering, allowlists, errors and timeouts.

@@ -29,6 +29,17 @@ function renderCompanies(companies) {
   const fragment = document.createDocumentFragment();
   companies.forEach(company => {
     const row = element('div', 'prospect');
+    row.setAttribute('role', 'button');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-haspopup', 'dialog');
+    row.setAttribute('aria-label', `Open prospect: ${company.name || 'Unnamed company'}`);
+    row.addEventListener('click', () => openCompany(company.id, row));
+    row.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openCompany(company.id, row);
+      }
+    });
     const info = element('div', '');
     info.append(element('div', 'company', company.name || 'Unnamed company'));
     info.append(element('div', 'meta', [company.company_type, company.city, company.country].filter(Boolean).join(' · ') || 'Details not provided'));
@@ -76,3 +87,122 @@ document.getElementById('close').onclick = () => modal.classList.add('hidden');
 const searchUnavailable = () => alert('Prospect research is not connected yet. No search has been queued.');
 document.getElementById('modalRun').onclick = searchUnavailable;
 document.getElementById('runSearch').onclick = searchUnavailable;
+
+const drawer = document.getElementById('prospectDrawer');
+const detailBody = document.getElementById('detailBody');
+const detailTitle = document.getElementById('detailTitle');
+let detailRequest;
+let detailTrigger;
+let detailVersion = 0;
+const known = value => typeof value === 'string' && value.trim() ? value : 'Unknown';
+const metric = value => scoreValue(value) === null ? 'Unknown' : `${scoreValue(value)}/100`;
+function recommendedAction(value) {
+  const score = scoreValue(value);
+  return score === null ? 'Needs qualification' : score >= 85 ? 'Contact now' : score >= 70 ? 'Qualify and contact' : 'Monitor';
+}
+function safeURL(value) {
+  if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) return null;
+  try {
+    const url = new URL(value);
+    return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+  } catch { return null; }
+}
+function detailField(parent, label, value, link = false) {
+  const field = element('div', 'detail-field');
+  field.append(element('dt', '', label));
+  const dd = element('dd', '', known(value));
+  const href = link ? safeURL(value) : null;
+  if (href) {
+    const anchor = element('a', '', value);
+    anchor.href = href;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    dd.replaceChildren(anchor);
+  }
+  field.append(dd);
+  parent.append(field);
+}
+function detailSection(title) {
+  const section = element('section', 'detail-section');
+  section.append(element('h3', '', title));
+  detailBody.append(section);
+  return section;
+}
+function renderDetail({company, contacts, signals}) {
+  detailTitle.textContent = known(company.name);
+  detailBody.replaceChildren();
+  const overview = detailSection('Company');
+  const facts = element('dl', 'detail-grid');
+  for (const [label, key] of [['Company type','company_type'], ['City','city'], ['Country','country'], ['Website','website']]) {
+    detailField(facts, label, company[key], key === 'website');
+  }
+  overview.append(facts, element('p', 'detail-description', known(company.description)));
+  const intelligence = detailSection('Commercial intelligence');
+  const scores = element('dl', 'detail-grid metrics');
+  for (const [label, key] of [['Opportunity Score','opportunity_score'], ['Buying Intent','buying_intent'], ['Commercial Potential','commercial_potential'], ['Wine Fit','wine_fit'], ['Armagnac Fit','armagnac_fit'], ['Accessibility','accessibility']]) {
+    detailField(scores, label, metric(company[key]));
+  }
+  intelligence.append(scores);
+  const action = detailSection('Recommended action');
+  action.append(element('p', 'next-action', recommendedAction(company.opportunity_score)),
+    element('p', 'detail-note', 'Rule-based, not AI-generated. Based only on the stored Opportunity Score: 85+ contact now; 70–84 qualify and contact; below 70 monitor; unknown needs qualification.'));
+  const people = detailSection('Contacts');
+  if (!contacts.length) people.append(element('p', 'detail-note', 'Decision maker not identified yet.'));
+  contacts.forEach(contact => {
+    const card = element('dl', 'detail-grid detail-card');
+    for (const [label, key] of [['Full name','full_name'], ['Job title','job_title'], ['Email','email'], ['Phone','phone'], ['LinkedIn','linkedin_url']]) {
+      detailField(card, label, contact[key], key === 'linkedin_url');
+    }
+    detailField(card, 'Confidence', metric(contact.confidence));
+    people.append(card);
+  });
+  const evidence = detailSection('Signals');
+  if (!signals.length) evidence.append(element('p', 'detail-note', 'No buying signals detected yet.'));
+  signals.forEach(signal => {
+    const card = element('dl', 'detail-grid detail-card');
+    for (const [label, key] of [['Signal type','signal_type'], ['Description','description'], ['Date','signal_date'], ['Source','source_url']]) {
+      detailField(card, label, signal[key], key === 'source_url');
+    }
+    detailField(card, 'Strength', metric(signal.strength));
+    evidence.append(card);
+  });
+}
+async function openCompany(id, trigger = detailTrigger) {
+  detailRequest?.abort();
+  const request = new AbortController();
+  detailRequest = request;
+  const version = ++detailVersion;
+  detailTrigger = trigger;
+  detailTitle.textContent = 'Company detail';
+  detailBody.replaceChildren(element('p', 'data-state', 'Loading prospect…'));
+  detailBody.setAttribute('aria-busy', 'true');
+  if (!drawer.open) drawer.showModal();
+  drawer.scrollTop = 0;
+  const timer = setTimeout(() => request.abort(), 15000);
+  try {
+    const response = await fetch(`/api/company?id=${encodeURIComponent(id)}`, {cache: 'no-store', signal: request.signal});
+    const data = await response.json();
+    const row = value => value && typeof value === 'object' && !Array.isArray(value);
+    if (!response.ok || data.success !== true || !row(data.company) || data.company.id !== id ||
+      !Array.isArray(data.contacts) || !data.contacts.every(row) || !Array.isArray(data.signals) || !data.signals.every(row)) {
+      throw new Error(response.status === 404 ? 'not-found' : 'load-failed');
+    }
+    if (version === detailVersion && drawer.open) renderDetail(data);
+  } catch (error) {
+    if (version !== detailVersion || !drawer.open) return;
+    const message = error.message === 'not-found' ? 'This company could not be found.' : 'Prospect details could not be loaded. Please try again.';
+    const retry = element('button', 'action', 'Retry');
+    retry.addEventListener('click', () => openCompany(id));
+    detailBody.replaceChildren(element('p', 'data-state', message), retry);
+  } finally {
+    clearTimeout(timer);
+    if (version === detailVersion) detailBody.setAttribute('aria-busy', 'false');
+  }
+}
+document.getElementById('closeDetail').addEventListener('click', () => drawer.close());
+drawer.addEventListener('close', () => {
+  ++detailVersion;
+  detailRequest?.abort();
+  detailBody.setAttribute('aria-busy', 'false');
+  detailTrigger?.focus();
+});
