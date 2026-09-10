@@ -11,7 +11,7 @@ test('signals use exact count, exclude audit evidence, link company and sanitize
  globalThis.fetch=async(url,options)=>{
   if(url.pathname.endsWith('wse_signal_count'))return Response.json(1200);
   assert.equal(url.searchParams.get('signal_type'),'not.in.(research_evidence,scoring_evidence)');
-  assert.equal(url.searchParams.get('limit'),'50');assert.equal(options.redirect,'error');
+  assert.equal(url.searchParams.get('limit'),'200');assert.equal(options.redirect,'error');
   return Response.json([{id:'signal',company_id:'company',description:'<img src=x>',companies:{name:'Merchant'}}]);
  };
  const result=await invoke();assert.equal(result.statusCode,200);assert.equal(result.body.count,1200);assert.equal(result.body.signals.length,1);assert.equal(result.body.signals[0].company_name,'Merchant');assert.equal(result.body.signals[0].companies,undefined);

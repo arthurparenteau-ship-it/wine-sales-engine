@@ -1,3 +1,4 @@
+import {analyse,summary} from '../lib/intelligence/analyse.js';
 import {boundedJSON} from '../lib/http.js';
 // Only fields used by this dashboard are exposed by this public, read-only route.
 const fields = ['id', 'name', 'country', 'city', 'company_type', 'description',
@@ -31,9 +32,10 @@ export default async function handler(req, res) {
     // Page explicitly: Supabase's default row limit must not silently hide companies.
     for (;;) {
       const url = new URL('/rest/v1/companies', base);
-      url.searchParams.set('select', fields.join(','));
+      url.searchParams.set('select', [...fields,'website','last_researched_at','research_profile','contacts(full_name,job_title,email,phone,linkedin_url,confidence,source)'].join(','));
+      url.searchParams.set('contacts.limit','20');
       url.searchParams.set('order', 'id.asc');
-      url.searchParams.set('limit', '50');
+      url.searchParams.set('limit', '10');
       url.searchParams.set('offset', String(companies.length));
       const response = await fetch(url, {
         headers: { apikey: key, Accept: 'application/json' },
@@ -54,7 +56,7 @@ export default async function handler(req, res) {
         return fail(502, 'INVALID_DATABASE_RESPONSE', 'The database returned an unexpected response.');
       }
       if (!rows.length) break;
-      companies.push(...rows.map(row => Object.fromEntries(fields.map(field => [field, row[field] ?? null]))));
+      companies.push(...rows.map(row => ({...Object.fromEntries(fields.map(field => [field, row[field] ?? null])),intelligence:summary(analyse(row,Array.isArray(row.contacts)?row.contacts:[]))})));
     }
     return res.status(200).json({ success: true, count: companies.length, companies });
   } catch {

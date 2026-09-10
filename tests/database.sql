@@ -14,26 +14,43 @@ begin
  update public.searches set status='running' where id=sid;
  payload:=jsonb_build_array(jsonb_build_object('company',jsonb_build_object(
    'name','Rollback Integration Merchant','website','https://rollback-integration.invalid/',
-   'country','Belgium','description','Preserve original','opportunity_score',90),
+   'country','Belgium','description','Preserve original','opportunity_score',90,'research_profile',jsonb_build_object('evidence',jsonb_build_array(jsonb_build_object('quote','Rollback fixture','source_url','https://rollback-integration.invalid/')))),
    'contacts',jsonb_build_array(jsonb_build_object('full_name','Fixture Person','source','https://rollback-integration.invalid/')),
    'signals',jsonb_build_array(jsonb_build_object('signal_type','research_evidence','description','Synthetic rollback-only evidence','source_url','https://rollback-integration.invalid/'))));
- r:=public.wse_finish_search(sid,payload,'{}');
+ r:=public.wse_finish_search(sid,payload,'{"engine_version":"intelligence-v2"}');
  if r->'search'->>'status'<>'completed' then raise exception 'Import failed'; end if;
  select id into strict cid from public.companies where website='https://rollback-integration.invalid/';
- r:=public.wse_finish_search(sid,payload,'{}');
+ r:=public.wse_finish_search(sid,payload,'{"engine_version":"intelligence-v2"}');
  if r->>'error'<>'SEARCH_EXPIRED' then raise exception 'Completed import repeated'; end if;
  r:=public.wse_begin_search(gen_random_uuid(),'Belgium','Importer / Distributor','Wine + Armagnac');
+ if r->>'cached'<>'true' then raise exception 'Cache not reused'; end if;
+ if not exists(select 1 from public.search_companies where search_id=sid and company_id=cid) then raise exception 'Missing search-company link'; end if;
+ if (select last_researched_at is null from public.companies where id=cid) then raise exception 'Research freshness missing'; end if;
+ r:=public.wse_begin_search(gen_random_uuid(),'Belgium','Importer / Distributor','Wine + Armagnac',true);
  sid:=(r->'search'->>'id')::uuid;
  update public.searches set status='running' where id=sid;
  payload:=jsonb_set(payload,'{0,company,opportunity_score}','10');
  payload:=jsonb_set(payload,'{0,company,description}','"Poorer replacement"');
- r:=public.wse_finish_search(sid,payload,'{}');
+ r:=public.wse_finish_search(sid,payload,'{"engine_version":"intelligence-v2"}');
  if (r->'search'->'metrics'->>'matched')::int<>1 then raise exception 'Domain match failed'; end if;
  if (select opportunity_score<>90 or description<>'Preserve original' from public.companies where id=cid) then raise exception 'Existing data overwritten'; end if;
  select count(*) into n from public.contacts where company_id=cid;
  if n<>1 then raise exception 'Duplicate contact'; end if;
  select count(*) into n from public.signals where company_id=cid;
  if n<>1 then raise exception 'Duplicate evidence'; end if;
+ if has_table_privilege('anon','public.company_reviews','INSERT') or has_table_privilege('authenticated','public.company_reviews','SELECT') then raise exception 'Private review exposed'; end if;
+ -- Force a failure after the first candidate has written within the same function transaction.
+ r:=public.wse_begin_search(gen_random_uuid(),'Belgium','Importer / Distributor','Wine + Armagnac',true);
+ sid:=(r->'search'->>'id')::uuid;
+ update public.searches set status='running' where id=sid;
+ payload:=jsonb_set(payload,'{0,company,website}','"https://rollback-second.invalid/"');
+ begin
+   perform public.wse_finish_search(sid,payload||'[{"company":{"name":"Invalid","country":"France"},"signals":[],"contacts":[]}]'::jsonb,'{}');
+   raise exception using errcode='P0002',message='Expected invalid candidate failure';
+ exception when sqlstate 'P0001' then null;
+ end;
+ if exists(select 1 from public.companies where website='https://rollback-second.invalid/') then raise exception 'Partial import persisted'; end if;
+ if exists(select 1 from public.search_companies where search_id=sid) then raise exception 'Partial link persisted'; end if;
  if has_function_privilege('anon','public.wse_finish_search(uuid,jsonb,jsonb)','EXECUTE') then raise exception 'Import exposed to anon'; end if;
  if not has_function_privilege('service_role','public.wse_finish_search(uuid,jsonb,jsonb)','EXECUTE') then raise exception 'Server import denied'; end if;
 end $$;

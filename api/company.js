@@ -1,7 +1,8 @@
+import {analyse} from '../lib/intelligence/analyse.js';
 import {boundedJSON} from '../lib/http.js';
 // Only fields used by this dashboard are exposed by this public, read-only route.
 const companyFields = ['id', 'name', 'country', 'city', 'company_type', 'description',
-  'website', 'buying_intent', 'opportunity_score', 'commercial_potential', 'wine_fit', 'armagnac_fit', 'accessibility'];
+  'website', 'buying_intent', 'opportunity_score', 'commercial_potential', 'wine_fit', 'armagnac_fit', 'accessibility','research_profile','last_researched_at'];
 const contactFields = ['full_name', 'job_title', 'email', 'phone', 'linkedin_url', 'confidence', 'source'];
 const signalFields = ['signal_type', 'description', 'signal_date', 'strength', 'source_url'];
 
@@ -62,7 +63,9 @@ export default async function handler(req, res) {
       readRows('contacts', contactFields, 'company_id'),
       readRows('signals', signalFields, 'company_id')
     ]);
-    return res.status(200).json({ success: true, company, contacts, signals });
+    const intelligence=analyse(company,contacts,signals);
+    const {research_profile,...publicCompany}=company;
+    return res.status(200).json({ success: true, company:publicCompany, contacts, signals, intelligence });
   } catch {
     return fail(controller.signal.aborted ? 504 : 502,
       controller.signal.aborted ? 'DATABASE_TIMEOUT' : 'DATABASE_UNAVAILABLE',

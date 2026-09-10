@@ -12,7 +12,7 @@ const scoreValue = value => {
   return Number.isFinite(number) && number >= 0 && number <= 100 ? number : null;
 };
 function updateStats(companies) {
-  const scores = companies?.map(c => scoreValue(c.opportunity_score)).filter(s => s !== null) ?? [];
+  const scores = companies?.map(c => c.intelligence ? scoreValue(c.intelligence.opportunity_score) : scoreValue(c.opportunity_score)).filter(s => s !== null) ?? [];
   document.getElementById('trackedCount').textContent = companies ? companies.length : '—';
   document.getElementById('scoredCount').textContent = companies ? scores.length : '—';
   document.getElementById('averageScore').textContent = scores.length
@@ -21,14 +21,14 @@ function updateStats(companies) {
   document.getElementById('marketCount').textContent = companies
     ? `Across ${markets.size} recorded markets` : 'Waiting for companies';
 }
-function renderCompanies(companies) {
+function renderCompanies(companies, alreadySorted=false) {
   container.replaceChildren();
   if (!companies.length) {
     container.append(element('p', 'data-state', 'No companies yet. Add companies in Supabase to see them here.'));
     return;
   }
   const fragment = document.createDocumentFragment();
-  [...companies].sort((a,b) => (scoreValue(b.opportunity_score) ?? -1) - (scoreValue(a.opportunity_score) ?? -1)).forEach(company => {
+  (alreadySorted ? companies : [...companies].sort((a,b) => (scoreValue(b.opportunity_score) ?? -1) - (scoreValue(a.opportunity_score) ?? -1))).forEach(company => {
     const row = element('div', 'prospect');
     row.setAttribute('role', 'button');
     row.setAttribute('tabindex', '0');
@@ -45,10 +45,11 @@ function renderCompanies(companies) {
     info.append(element('div', 'company', company.name || 'Unnamed company'));
     info.append(element('div', 'meta', [company.company_type, company.city, company.country].filter(Boolean).join(' · ') || 'Details not provided'));
     if (company.description) info.append(element('div', 'meta', company.description));
-    const score = element('div', 'score', scoreValue(company.opportunity_score) ?? '—');
+    const score = element('div', 'score', (company.intelligence ? scoreValue(company.intelligence.opportunity_score) : scoreValue(company.opportunity_score)) ?? '—');
+    if(company.intelligence)info.append(element('div','meta',`${company.intelligence.action.action} · confidence ${company.intelligence.confidence}% · coverage ${company.intelligence.evidence_coverage}%`));
     score.append(element('small', '', 'OPPORTUNITY'));
     const intent = element('div', 'hide-mobile');
-    const value = scoreValue(company.buying_intent);
+    const value = scoreValue(company.intelligence ? company.intelligence.buying_intent : company.buying_intent);
     intent.append(element('span', 'badge', value === null ? 'Intent unknown' : `${value} intent`));
     row.append(info, score, intent);
     fragment.append(row);
@@ -66,7 +67,7 @@ async function loadCompanies() {
     const data = await response.json();
     if (!response.ok || data.success !== true || !Array.isArray(data.companies) ||
       data.companies.some(c => !c || typeof c !== 'object' || Array.isArray(c))) throw new Error();
-    renderCompanies(data.companies);
+    if(typeof setPipelineCompanies==='function')setPipelineCompanies(data.companies);else renderCompanies(data.companies);
     updateStats(data.companies);
   } catch {
     const state = element('div', 'data-state');
@@ -96,12 +97,12 @@ function renderSignals(signals, count = signals.length) {
   const fragment = document.createDocumentFragment();
   signals.slice(0, 6).forEach(signal => {
     const item = element('div', 'signal');
-    const strength = scoreValue(signal.strength);
+    const strength = scoreValue('current_strength' in signal ? signal.current_strength : signal.strength);
     const dot = element('div', strength !== null && strength >= 85 ? 'signal-dot hot' : 'signal-dot');
     const body = element('div', '');
     body.append(element('strong', '', signal.company_name || 'Unknown company'));
     body.append(element('p', '', signal.description || 'Signal details unavailable'));
-    const label = [formatSignalType(signal.signal_type), signal.signal_date || 'Date unknown', strength === null ? null : `${strength}/100`].filter(Boolean).join(' · ');
+    const label = [formatSignalType(signal.signal_type), signal.signal_date || 'Date unknown', strength === null ? 'Timing unknown' : `${strength}/100 current`].filter(Boolean).join(' · ');
     body.append(element('span', '', label));
     item.append(dot, body);
     if (signal.company_id) {
@@ -191,7 +192,9 @@ function detailSection(title) {
   detailBody.append(section);
   return section;
 }
-function renderDetail({company, contacts, signals}) {
+function renderDetail(data) {
+  if(typeof renderIntelligence==='function' && renderIntelligence(data))return;
+  const {company,contacts,signals}=data;
   detailTitle.textContent = known(company.name);
   detailBody.replaceChildren();
   const overview = detailSection('Company');

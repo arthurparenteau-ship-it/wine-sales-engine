@@ -1,93 +1,82 @@
 # Wine Sales Engine
 
-Wine and spirits commercial prioritization: vanilla HTML/CSS/JS, Vercel Node.js functions, Supabase/PostgreSQL. No framework migration, LLM scoring, outbound messaging, or new runtime dependencies.
+Commercial prioritization for wine and spirits. Vanilla HTML/CSS/JS → Vercel Node functions → bounded research provider → Supabase/PostgreSQL. No framework migration, runtime dependencies, LLM scoring, outbound messaging or billing.
 
-## Implemented
+## Commercial intelligence release
 
-- Supabase pipeline sorted by stored Opportunity Score (unknown last).
-- Responsive company dossier with six metrics, contacts, signals, source links, and rule-based next action.
-- Quick Search and New Search use the same validated search API.
-- Persistent pending → running → completed/failed lifecycle, recent search history, retry, safe request replay, and dashboard refresh.
-- Provider adapter, conservative evidence verification, normalization, deduplication, deterministic scoring and atomic company/contact/signal persistence.
-- Real Brave Search adapter and local-only evidence-file adapter. No fallback demo generation.
-- Database-backed live signals and exact total (research/scoring provenance is excluded from the buying-signal count).
+Quick Search and New Search run multilingual Brave discovery, cluster first-party sources, verify identity/geography/channel, analyse portfolio and capacity, extract dated signals and public contacts, calculate explainable scores, import atomically and refresh the pipeline.
 
-## Architecture / lifecycle
+The dossier now shows research opportunity, evidence confidence/coverage, Why now, fit, positive factors, risks, preferred contact, current signal strength and grouped evidence. Original stored scores remain visible separately. Country/type/score/intent/contact/recency filters and four sorts use the current research assessment. Search history shows quality metrics, provider calls, rejection reasons and imported companies.
 
-Browser → `POST /api/search` → atomic request claim → provider → normalization → evidence checks → batch dedup → qualification/scoring → atomic database import + completion → dashboard refresh.
+See [complete research rules](docs/research.md) for query templates, source tiers, signal taxonomy/decay, contact ranking, weights, confidence, recommendations, cache and limitations. These are deterministic evidence indicators, not calibrated probabilities of purchase.
 
-This release runs bounded research synchronously within the POST request; it does not enqueue work that depends on a serverless process surviving after response. Status/history reads show persisted state while POST runs. Search budget is 35 seconds, individual database requests 10 seconds, cleanup is bounded; Vercel function maxDuration is 60 seconds. Interrupted pending/running searches older than two minutes become failed on the next history/status read or submission. No cron is required. Future high-volume research needs a durable job runner.
+## APIs
 
-A request UUID makes network retries replay the same search without duplicate execution. Explicit retry of a failed search creates a new UUID. Database admission is serialized: one active search project-wide, ten new searches per hour. These conservative global limits bound anonymous usage; they are not user authentication. Import and completion run in one transaction, so failed imports cannot leave partial prospects.
-
-## API
-
-| Route | Methods | Behavior |
+| Route | Method | Result |
 |---|---|---|
-| `/api/companies` | GET | Company list, selected dashboard fields |
-| `/api/company?id=<uuid>` | GET | Company + related contacts/signals |
-| `/api/signals` | GET | Up to 50 strongest signals, date tie-breaker, exact total |
-| `/api/search` | POST | Validate, persist and execute a search |
-| `/api/search?id=<uuid>` | GET | Persisted search details/status/metrics |
+| `/api/companies` | GET | Allowlisted company data + compact current intelligence |
+| `/api/company?id=<uuid>` | GET | Company, contacts, stored signals and explained intelligence |
+| `/api/signals` | GET | Bounded current-strength ranking and exact stored count |
+| `/api/search` | POST | Persist/execute search, or reuse a completed cached search |
+| `/api/search?id=<uuid>` | GET | Lifecycle, sanitized quality metrics and accepted company links |
 | `/api/searches` | GET | Latest 20 searches and provider availability |
 
-POST requires JSON with exactly `market`, `prospect_type`, `product_focus`, `request_id` (UUID). Supported markets: Belgium, France, United Kingdom, Switzerland. Types: Importer / Distributor, Premium Caviste, Restaurant, Spirits Buyer. Products: Wine + Armagnac, Wine, Armagnac. Input limit: 2 KB. Provider-unavailable attempts create a failed search and return 503; empty verified results are a legitimate completed search with zero prospects. A 202 replay means the original request is still pending/running; inspect status/history.
+POST JSON: `market`, `prospect_type`, `product_focus`, `request_id` (UUID), optional boolean `refresh`. Supported markets: Belgium, France, United Kingdom, Switzerland. Targets: Importer / Distributor, Premium Caviste, Restaurant, Spirits Buyer. Products: Wine + Armagnac, Wine, Armagnac. No other fields, candidate records, table names, SQL or provider URLs are accepted. Limit 2 KB.
 
-All APIs use no-store. Errors are stable codes and safe messages, never raw database/provider bodies. Logs contain only search ID, stage, provider identifier and numeric counts.
+Lifecycle: pending → running → completed/failed. Execution stays inside the POST, max 35 seconds; Vercel maxDuration 60 seconds allows bounded cleanup. Requests interrupted beyond two minutes are expired on the next status/history/submission. Request UUIDs protect retries of executed searches. Cache reuses a completed v2 search for six hours; Fresh research bypasses it. One active run and ten new runs/hour are project-wide, not per user.
 
-## Configuration
+## Server configuration
 
-Existing server variables: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (modern secret key, sent only as the server `apikey` header).
+Existing variables: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (modern sb_secret_ key, server `apikey` header only).
 
-For autonomous discovery configure these **server-side Vercel environment variables** and redeploy:
+Web discovery requires Vercel Production variables:
 
 - `RESEARCH_PROVIDER=brave`
-- `BRAVE_SEARCH_API_KEY`: an active Brave Web Search API subscription key. Obtain from the Brave API dashboard; never paste it into source, browser code or logs. Choose a subscription whose terms allow the intended storage of result excerpts.
+- `BRAVE_SEARCH_API_KEY` = active Brave Web Search API key
 
-No provider key is bundled. A connected assistant web-search tool is not available inside Vercel functions. If these variables are absent, history and the POST failure explicitly say provider unavailable. Supabase setup alone cannot provide web discovery.
+Redeploy after changing environment variables. Never place values in frontend code, commit .env files, or paste credentials into logs. Choose a Brave subscription permitting the intended result/excerpt storage. The assistant's connected search tools do not supply Vercel runtime credentials.
 
-Local evidence mode: `RESEARCH_PROVIDER=evidence-file`, `RESEARCH_EVIDENCE_FILE=/absolute/path/to/verified-evidence.json`. It is disabled when `VERCEL` is set or NODE_ENV is production. The file must contain your real, reviewed public-source excerpts following [the provider contract](docs/research.md); no fixture dataset ships as a production provider.
+Without a configured provider, searches persist as failed with `PROVIDER_UNAVAILABLE`; no demo company is generated. Provider authentication/upstream errors produce sanitized `PROVIDER_FAILED`. Availability checks confirm configuration presence, not whether a key is valid; an actual run validates the provider.
 
-## Database migrations
+Local-only evidence adapter: `RESEARCH_PROVIDER=evidence-file`, `RESEARCH_EVIDENCE_FILE=/absolute/path/to/reviewed-evidence.json`. Disabled in Vercel and NODE_ENV=production. Use real reviewed public evidence; shipped unit fixtures never become production prospects.
 
-Versioned SQL is in `supabase/migrations/`. The search migration adds only request_id, updated_at, error_code and metrics to searches, plus indexes and transactional helper functions. The second migration adds a signal count function. Existing companies, contacts and signals are not modified by migrations. New functions are SECURITY INVOKER with fixed search_path, revoked from PUBLIC/anon/authenticated, executable by service_role. Existing RLS is preserved.
+## Database
 
-Apply migrations before deploying the new endpoints. They were applied to the connected project for this release; do not rerun the same SQL manually. Helper functions are not public SQL proxies and accept only structured application arguments.
+Versioned migrations are in `supabase/migrations/` and have been applied to the connected project for this release. Do not rerun their SQL manually.
 
-## Evidence, scoring, deduplication
+The intelligence migration adds a bounded company `research_profile`, nullable `last_researched_at`, `search_companies` links and private `company_reviews`. Existing source summaries are marked legacy without asserting fresh research. Original company fields, scores, contacts and signals are preserved. New cache/import helpers retain SECURITY INVOKER, fixed search_path and service-role-only execution. A partial cache index supports identical completed searches; existing domain/name/contact/signal indexes are reused. A second migration aligns SQL domain/name normalization for tracking queries and uppercase accents, rebuilding its existing expression indexes.
 
-See [research rules and provider contract](docs/research.md) for exact weights, thresholds, acceptance rules and limits. Missing facts remain null. A total is generated only when all scoring dimensions have evidence. Existing populated scores are preserved; candidate calculations are recorded separately as scoring evidence. No premium positioning, capacity, openness, organic or terroir metric is invented.
-
-Canonical domain ignores HTTP/HTTPS, www, case, path and trailing slash. Database matching prefers domain; normalized name + country is used only when one domain is absent. Serialized imports prevent duplicates across simultaneous pipeline calls. External/manual database writers must use equivalent checks. Existing data is never deleted; populated fields and existing contacts are preserved. New verified missing company values and previously unseen evidence/contacts are appended transactionally. Ambiguous same-name companies with different domains remain separate.
+Private ratings, notes and commercial statuses have no public read/write API. Authenticated editing is deliberately deferred. Existing RLS remains enabled; no anon/authenticated policies are added. The security advisor's informational “RLS enabled, no policy” notices reflect this default-deny architecture.
 
 ## Security boundary
 
-The application still has no authentication. Read endpoints expose their allowlisted fields (including contact details) publicly through server privileges that bypass RLS. The search endpoint can create bounded searches and verified imports; it is not a generic database proxy. Use Vercel deployment access protection for private commercial data. Origin checks block cross-site browser POSTs but do not authenticate direct API clients. Global database-backed limits bound provider spending; a future authenticated workspace is required for multi-user production.
+The dashboard and read APIs remain public, including selected commercial contact information. Server APIs use the service role; RLS is not user authentication. Protect the deployment if the data should be private. Origin checks block cross-site browser POSTs; they do not authenticate direct clients. Rate and concurrency limits bound spending but cannot establish user identity.
 
-No candidate website is fetched by the server. The only external research request is to a hardcoded HTTPS Brave API endpoint with redirects disabled. Citation URLs reject non-HTTP(S), credentials, IP literals, local names, nonstandard ports and whitespace; validation is not permission to fetch them. A future crawler must add DNS/IP pinning, private-address rejection and redirect revalidation. Provider responses are capped at 512 KB; database responses at 1.5 MB. The browser uses DOM/textContent, with validated HTTP(S) links and noopener/noreferrer. No arbitrary SQL, table, column, provider URL or filter is accepted from a client.
+Research only fetches the fixed Brave HTTPS endpoint, never a candidate URL. Redirects are forbidden; provider responses capped at 512 KB, database responses at 1.5 MB; explicit timeouts and allowed methods apply. No SQL/URL proxy, secrets in client assets, raw upstream errors or stack traces. Untrusted text uses DOM/textContent and validated HTTP(S) source links. A future crawler requires DNS/private-IP validation and redirect revalidation before fetching websites.
 
-## Local checks
+## Local development and tests
 
-Requires Node 22+ (built-in fetch, AbortSignal, node:test). No dependencies to install:
+Node 22+; no dependencies to install:
 
 ```
 node --test tests/*.test.mjs
 node --env-file=.env.local scripts/dev.mjs
 ```
 
-Use an ignored `.env.local` with server variables, or run the dev server without it to test missing configuration. Open http://127.0.0.1:3000. Never commit .env files. The developer server exposes only exact application routes/assets.
+Open http://127.0.0.1:3000. The local server exposes exact route/asset allowlists. Run without .env.local to inspect missing-configuration states.
 
-Automated tests mock provider/database responses and do not generate production prospects. The rollback-only PostgreSQL integration check in `tests/database.sql` verifies request replay, import, repeated-search dedup, preservation of existing data, and function privileges. It was run on the connected database without retaining fixture rows.
+Automated checks cover discovery, classification, trust, recency boundaries, contacts, score completeness, all recommendation branches, API validation/failure/timeout, safe rendering, filters, search lifecycle and drawer behavior. `tests/database.sql` is rollback-only and verifies imports, deduplication, preservation, cache/bypass, freshness, search links, failure atomicity and private permissions. Run it on a development database after migrations and when admission limits permit it; it leaves no fixture records.
 
 ## Production verification
 
-1. Confirm Vercel deployed the latest main commit and the existing Supabase variables remain configured.
-2. Check `/api/companies`, `/api/signals`, `/api/searches`; open a dossier and inspect stored sources.
-3. Submit Belgium / Importer / Distributor / Wine + Armagnac. Confirm a real search record and its outcome in history.
-4. Without a provider key, expect persisted failed + PROVIDER_UNAVAILABLE, no added companies. With a key, expect only evidence-accepted prospects or a legitimate zero-result completion.
-5. Retry the same request UUID: no extra search/import. Retry failed research using the UI: new search record.
-6. Check counts, descending score order, recent history, drawer, mobile layout and console. API methods/invalid inputs must return safe 4xx errors.
+1. Confirm Vercel deployed the latest main commit.
+2. Open `/api/companies`, `/api/signals`, `/api/searches`; check success and real records.
+3. Open a dossier: distinguish original stored scores from current research confidence, coverage and timing. Check sources and contact labels.
+4. Filter/sort the pipeline and inspect a previous search's quality details.
+5. Submit Belgium / Importer / Distributor / Wine + Armagnac. Missing provider must yield an honest persisted failure. With Brave configured, expect evidence-backed imports or a legitimate zero-result completion.
+6. Repeat a completed search within six hours: same cached search, no provider spend. Fresh research bypasses cache. Replaying an executed request UUID must not re-import.
+7. Confirm related companies, profile freshness, contacts and signals; validate mobile layout, console, invalid inputs, unsupported methods and safe source links.
 
-## Planned, not implemented
+## Next
 
-Durable background jobs, broad crawling, richer multilingual entity extraction, manually reviewed evidence changes, automatic refreshing of reviewed scores, authentication/tenancy, CRM/billing/outreach. The initial adapter intentionally favors false negatives over unsupported claims.
+Activate and evaluate Brave against real Belgian accounts, improve source/entity attribution from observed rejections, then add authenticated commercial review for score calibration. Durable jobs, crawling, richer language extraction, CRM/outreach, billing and tenancy remain future work.

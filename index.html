@@ -54,10 +54,10 @@
     </section>
 
     <section class="stats">
-      <div class="stat"><span>Prospects scored</span><strong id="scoredCount">—</strong><small>With a stored opportunity score</small></div>
+      <div class="stat"><span>Prospects scored</span><strong id="scoredCount">—</strong><small>With a research opportunity score</small></div>
       <div class="stat"><span>Prospects tracked</span><strong id="trackedCount">—</strong><small id="marketCount">Waiting for companies</small></div>
       <div class="stat"><span>Buying signals</span><strong id="signalCount">—</strong><small>Live signals in database</small></div>
-      <div class="stat"><span>Avg. opportunity</span><strong><b id="averageScore">—</b><span>/100</span></strong><small>Average of stored scores</small></div>
+      <div class="stat"><span>Avg. opportunity</span><strong><b id="averageScore">—</b><span>/100</span></strong><small>Average of research scores</small></div>
     </section>
 
     <section class="content-grid">
@@ -69,6 +69,15 @@
           </div>
           <span class="muted">All companies</span>
         </div>
+        <div class="pipeline-filters">
+          <label>Country<select id="filterCountry"><option value="">All countries</option></select></label>
+          <label>Type<select id="filterType"><option value="">All types</option></select></label>
+          <label>Min. opportunity<select id="filterScore"><option value="0">Any / unknown</option><option value="40">40+</option><option value="60">60+</option><option value="80">80+</option></select></label>
+          <label>Min. intent<select id="filterIntent"><option value="0">Any / unknown</option><option value="30">30+</option><option value="60">60+</option></select></label>
+          <label>Sort<select id="pipelineSort"><option value="score">Opportunity</option><option value="intent">Buying intent</option><option value="signal">Newest signal</option><option value="researched">Recently researched</option></select></label>
+          <label class="check-label"><input type="checkbox" id="filterContact"> Decision maker</label>
+          <label class="check-label"><input type="checkbox" id="filterRecent"> Strong recent signal</label>
+        </div><p class="detail-note" id="filterCount"></p>
         <div id="prospects" role="status" aria-live="polite" aria-busy="true"><p class="data-state">Loading companies…</p></div>
       </div>
 
@@ -96,18 +105,14 @@
           <label>Prospect type<select id="type"><option>Importer / Distributor</option><option>Premium Caviste</option><option>Restaurant</option><option>Spirits Buyer</option></select></label>
           <label>Products<select id="product"><option>Wine + Armagnac</option><option>Wine</option><option>Armagnac</option></select></label>
         </div>
+        <label class="check-label"><input type="checkbox" id="refreshResearch"> Fresh research (bypass six-hour cache)</label>
         <button class="primary wide" id="runSearch">Find prospects</button>
       </div>
       <div class="panel methodology">
         <div class="eyebrow">ENGINE LOGIC</div>
         <h3>Opportunity Score</h3>
-        <div class="score-bars">
-          <div><span>Commercial potential</span><b>40%</b></div>
-          <div><span>Product fit</span><b>30%</b></div>
-          <div><span>Dated buying intent</span><b>20%</b></div>
-          <div><span>Verified accessibility</span><b>10%</b></div>
-        </div>
-        <p class="muted">Evidence rules v1. Overall score remains unknown until all four dimensions have evidence. Existing reviewed scores are preserved.</p>
+        <div class="score-bars"><div><span>Commercial potential / Buying intent</span><b>20% each</b></div><div><span>Product fit</span><b>15%</b></div><div><span>Premium, channel, openness, access</span><b>10% each</b></div><div><span>Geographic relevance</span><b>5%</b></div></div>
+        <p class="muted">Evidence rules v2. Unknown dimensions stay unknown. Opportunity is shown with confidence and coverage; dated signals decay over time.</p>
       </div>
     </section>
     <section class="panel recent-searches" id="searchHistoryPanel">
@@ -129,6 +134,7 @@
         <label>Target<select id="modalType"><option>Importer / Distributor</option><option>Premium Caviste</option><option>Restaurant</option><option>Spirits Buyer</option></select></label>
         <label>Product focus<select id="modalProduct"><option>Wine + Armagnac</option><option>Wine</option><option>Armagnac</option></select></label>
       </div>
+      <label class="check-label"><input type="checkbox" id="modalRefreshResearch"> Fresh research (bypass six-hour cache)</label>
       <button class="primary wide" id="modalRun">Start research</button>
     </div>
   </div>
@@ -141,6 +147,8 @@
     <div id="detailBody" aria-live="polite" aria-busy="false"></div>
   </dialog>
 
+  <script src="public-js/intelligence.js"></script>
+  <script src="public-js/filters.js"></script>
   <script src="app.js"></script>
   <script src="public-js/search.js"></script>
 </body>

@@ -9,23 +9,30 @@
     SEARCH_BUSY:'Another search is running. Please wait.',RATE_LIMITED:'Search limit reached. Try again later.'};
   function summary(row) {
     const metrics=row.metrics||{};
-    if(row.status==='completed')return `${row.prospects_found??0} qualified · ${metrics.inserted??0} new · ${metrics.matched??0} existing${row.prospects_found===0?' · No evidence-backed prospects accepted':''}`;
+    if(row.status==='completed')return `${row.prospects_found??0} accepted from ${metrics.raw_results??metrics.discovered??'unknown'} raw results · ${metrics.inserted??0} new · ${metrics.matched??0} existing${row.prospects_found===0?' · No evidence-backed prospects accepted':''}`;
     if(row.status==='failed')return failureText[row.error_code]||'Search failed. Please retry.';
     return row.status==='running'?'Research running':'Search pending';
   }
   function inputs(prefix) {return {market:document.getElementById(prefix?'modalMarket':'market').value,
-    prospect_type:document.getElementById(prefix?'modalType':'type').value,product_focus:document.getElementById(prefix?'modalProduct':'product').value};}
+    prospect_type:document.getElementById(prefix?'modalType':'type').value,product_focus:document.getElementById(prefix?'modalProduct':'product').value,refresh:Boolean(document.getElementById(prefix?'modalRefreshResearch':'refreshResearch')?.checked)};}
   async function request(url,options={},timeout=12000) {
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);
     try {const response=await fetch(url,{...options,cache:'no-store',signal:controller.signal});
       const data=await response.json();return {response,data};}finally{clearTimeout(timer);}
   }
-  function display(row) {
-    status.replaceChildren(element('p','search-message',`${row.market} · ${row.status}: ${summary(row)}`));
+  function display(row,companies=[],cached=false) {
+    status.replaceChildren(element('p','search-message',`${cached?'Reused completed search · ':''}${row.market} · ${row.status}: ${summary(row)}`));
     if(row.status==='failed') {
       const retry=element('button','action','Retry search');retry.disabled=busy;
       retry.addEventListener('click',()=>submit({market:row.market,prospect_type:row.prospect_type,product_focus:row.product_focus},true));status.append(retry);
     }
+    const details=element('details','search-details');details.append(element('summary','','Search quality details'));
+    details.append(element('p','detail-note',`${row.market} · ${row.prospect_type||'Unknown type'} · ${row.product_focus||'Unknown product'} · ${row.created_at||'Date unknown'}`));
+    const m=row.metrics||{};
+    for(const [label,key]of [['Raw results','raw_results'],['Unique candidates','unique_candidates'],['Verified candidates','verified_candidates'],['Accepted companies','accepted_companies'],['Contacts found','contacts_found'],['Signals found','signals_found'],['Scored companies','scored_companies'],['Provider requests','provider_request_count'],['Duration (ms)','duration_ms']])details.append(element('p','detail-note',`${label}: ${m[key]??'Not recorded'}`));
+    for(const key of ['duplicate','irrelevant','insufficient_evidence','wrong_geography','competitor_producer','weak_business_relevance','unsafe_source','unsupported_type','candidate_limit'])if(m.rejection_reasons?.[key])details.append(element('p','detail-note',`${key.replaceAll('_',' ')}: ${m.rejection_reasons[key]}`));
+    companies.forEach(c=>{const b=element('button','action',c.name);b.addEventListener('click',()=>openCompany(c.id,b));details.append(b);});
+    status.append(details);
   }
   async function loadHistory() {
     try {
@@ -40,7 +47,7 @@
           element('p','detail-note',`${row.product_focus} · ${new Date(row.created_at).toLocaleString()}`),element('p','detail-note',summary(row)));
         const button=element('button',`action search-${row.status}`,row.status);
         button.addEventListener('click',async()=>{
-          try {const {response,data}=await request(`/api/search?id=${encodeURIComponent(row.id)}`);if(!response.ok||!data.search)throw Error();display(data.search);}
+          try {const {response,data}=await request(`/api/search?id=${encodeURIComponent(row.id)}`);if(!response.ok||!data.search)throw Error();display(data.search,data.companies||[],data.cached);}
           catch {status.replaceChildren(element('p','data-state','Search status could not be loaded. Refresh and try again.'));}
         });
         card.append(text,button);history.append(card);
@@ -61,7 +68,7 @@
     try {
       const {response,data}=await request('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...input,request_id:lastRequest})},55000);
       if(data.search) {
-        display(data.search);
+        display(data.search,data.companies||[],data.cached);
         if(['completed','failed'].includes(data.search.status))lastRequest=null;
         if(data.search.status==='completed')await Promise.all([loadCompanies(),loadSignals()]);
       }else {
