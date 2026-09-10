@@ -168,7 +168,8 @@ function safeURL(value) {
   if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) return null;
   try {
     const url = new URL(value);
-    return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+    const host=url.hostname.toLowerCase().replace(/\.$/,'');
+    return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !url.port && host.includes('.') && !host.includes(':') && !/^[\d.]+$/.test(host) && !/(^|\.)(localhost|local|internal|invalid|test)$/.test(host) ? url.href : null;
   } catch { return null; }
 }
 function detailField(parent, label, value, link = false) {

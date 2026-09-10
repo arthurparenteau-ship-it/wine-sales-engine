@@ -29,8 +29,9 @@
     const details=element('details','search-details');details.append(element('summary','','Search quality details'));
     details.append(element('p','detail-note',`${row.market} · ${row.prospect_type||'Unknown type'} · ${row.product_focus||'Unknown product'} · ${row.created_at||'Date unknown'}`));
     const m=row.metrics||{};
-    for(const [label,key]of [['Raw results','raw_results'],['Unique candidates','unique_candidates'],['Verified candidates','verified_candidates'],['Accepted companies','accepted_companies'],['Contacts found','contacts_found'],['Signals found','signals_found'],['Scored companies','scored_companies'],['Provider requests','provider_request_count'],['Duration (ms)','duration_ms']])details.append(element('p','detail-note',`${label}: ${m[key]??'Not recorded'}`));
-    for(const key of ['duplicate','irrelevant','insufficient_evidence','wrong_geography','competitor_producer','weak_business_relevance','unsafe_source','unsupported_type','candidate_limit'])if(m.rejection_reasons?.[key])details.append(element('p','detail-note',`${key.replaceAll('_',' ')}: ${m.rejection_reasons[key]}`));
+    for(const [label,key]of [['Raw results','raw_results'],['Unique candidates','unique_candidates'],['Verified candidates','verified_candidates'],['Accepted companies','accepted_companies'],['Rejected candidates','rejected_candidates'],['Contacts found','contacts_found'],['Signals found','signals_found'],['Scored companies','scored_companies'],['Provider requests','provider_request_count'],['Duration (ms)','duration_ms']])details.append(element('p','detail-note',`${label}: ${m[key]??'Not recorded'}`));
+    for(const key of ['duplicate','irrelevant','insufficient_evidence','wrong_geography','competitor_producer','weak_business_relevance','unsafe_source','unsupported_type','candidate_limit','directory_or_platform'])if(m.rejection_reasons?.[key])details.append(element('p','detail-note',`${key.replaceAll('_',' ')}: ${m.rejection_reasons[key]}`));
+    for(const q of m.query_yield||[])details.append(element('p','detail-note',`${q.language} · ${q.query} · ${q.raw_count} results · ${q.new_verified} newly verified`));
     companies.forEach(c=>{const b=element('button','action',c.name);b.addEventListener('click',()=>openCompany(c.id,b));details.append(b);});
     status.append(details);
   }
@@ -70,7 +71,7 @@
       if(data.search) {
         display(data.search,data.companies||[],data.cached);
         if(['completed','failed'].includes(data.search.status))lastRequest=null;
-        if(data.search.status==='completed')await Promise.all([loadCompanies(),loadSignals()]);
+        if(data.search.status==='completed'){await Promise.all([loadCompanies(),loadSignals()]);try{const detail=await request(`/api/search?id=${encodeURIComponent(data.search.id)}`);if(detail.data.search)display(detail.data.search,detail.data.companies||[],data.cached);}catch{status.append(element('p','detail-note','Open this search in history to load its company list.'));}}
       }else {
         status.replaceChildren(element('p','data-state',failureText[data.error?.code]||'Search could not be started. Please retry.'));
       }
