@@ -9,7 +9,7 @@ function renderIntelligence(data) {
  const overview=detailSection('Commercial assessment');
  overview.append(element('p','detail-note',[data.company.company_type,data.company.city,data.company.country].filter(Boolean).join(' · ')));
  sourceLink(overview,data.company.website,'Company website');
- const metrics=element('dl','detail-grid metrics');
+ const metrics=element('dl','detail-grid metrics assessment-metrics');
  for(const [label,value]of [['Research opportunity',metric(i.opportunity_score)],['Evidence confidence',`${i.confidence}%`],['Evidence coverage',`${i.dimensions_known}/${i.dimensions_total} dimensions · ${i.evidence_coverage}% weight`]])detailField(metrics,label,value);
  overview.append(metrics,element('p','detail-note',`Assessed ${i.as_of} · ${i.product_focus} · ${i.version}. Stored opportunity: ${metric(data.company.opportunity_score)}. Research values are a separate assessment.`));
  overview.append(element('p','detail-note',i.last_researched_at?`Last researched: ${new Date(i.last_researched_at).toLocaleString()}`:'Fresh research date unknown; existing sourced records are assessed without claiming new research.'));
