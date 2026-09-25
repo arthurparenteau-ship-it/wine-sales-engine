@@ -1,12 +1,19 @@
 let pipelineCompanies=[];
+let pipelineReady=false;
+function clearPipelineCompanies() {
+ pipelineCompanies=[];
+ pipelineReady=false;
+ document.getElementById('filterCount').textContent='';
+}
 const researchScore=c=>c.intelligence?scoreValue(c.intelligence.opportunity_score):scoreValue(c.opportunity_score);
 function filteredCompanies(rows,filters) {
  const numeric=(v,min)=>!min||(v!==null&&v>=min);
  const filtered=rows.filter(c=>(!filters.country||c.country===filters.country)&&(!filters.type||c.company_type===filters.type)&&numeric(researchScore(c),Number(filters.score))&&numeric(c.intelligence?scoreValue(c.intelligence.buying_intent):scoreValue(c.buying_intent),Number(filters.intent))&&(!filters.contact||c.intelligence?.has_decision_maker)&&(!filters.recent||c.intelligence?.has_recent_signal));
- const value=c=>filters.sort==='intent'?c.intelligence?.buying_intent:filters.sort==='signal'?Date.parse(c.intelligence?.last_signal_at)||null:filters.sort==='researched'?Date.parse(c.intelligence?.last_researched_at)||null:researchScore(c);
+ const value=c=>filters.sort==='intent'?(c.intelligence?scoreValue(c.intelligence.buying_intent):scoreValue(c.buying_intent)):filters.sort==='signal'?Date.parse(c.intelligence?.last_signal_at)||null:filters.sort==='researched'?Date.parse(c.intelligence?.last_researched_at)||null:researchScore(c);
  return [...filtered].sort((a,b)=>(value(b)??-1)-(value(a)??-1)||String(a.name).localeCompare(String(b.name)));
 }
 function applyPipelineFilters() {
+ if (!pipelineReady) return;
  const get=id=>document.getElementById(id);
  const rows=filteredCompanies(pipelineCompanies,{country:get('filterCountry').value,type:get('filterType').value,score:get('filterScore').value,intent:get('filterIntent').value,contact:get('filterContact').checked,recent:get('filterRecent').checked,sort:get('pipelineSort').value});
  renderCompanies(rows,true);get('filterCount').textContent=`${rows.length} of ${pipelineCompanies.length} companies`;
@@ -14,6 +21,7 @@ function applyPipelineFilters() {
 }
 function setPipelineCompanies(rows) {
  pipelineCompanies=rows;
+ pipelineReady=true;
  for(const [id,key]of [['filterCountry','country'],['filterType','company_type']]) {
   const select=document.getElementById(id),previous=select.value;
   const all=element('option','','All '+(key==='country'?'countries':'types'));all.value='';select.replaceChildren(all);

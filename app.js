@@ -7,7 +7,7 @@ const element = (tag, className, text) => {
   return node;
 };
 const scoreValue = value => {
-  if (value === null || value === undefined || value === '' || typeof value === 'boolean') return null;
+  if (value === null || value === undefined || (typeof value !== 'number' && typeof value !== 'string') || (typeof value === 'string' && !value.trim())) return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 && number <= 100 ? number : null;
 };
@@ -33,7 +33,7 @@ function renderCompanies(companies, alreadySorted=false) {
     row.setAttribute('role', 'button');
     row.setAttribute('tabindex', '0');
     row.setAttribute('aria-haspopup', 'dialog');
-    row.setAttribute('aria-label', `Open prospect: ${company.name || 'Unnamed company'}`);
+    row.setAttribute('aria-label', `Open prospect: ${known(company.name)}`);
     row.addEventListener('click', () => openCompany(company.id, row));
     row.addEventListener('keydown', event => {
       if (event.key === 'Enter' || event.key === ' ') {
@@ -42,34 +42,42 @@ function renderCompanies(companies, alreadySorted=false) {
       }
     });
     const info = element('div', '');
-    info.append(element('div', 'company', company.name || 'Unnamed company'));
-    info.append(element('div', 'meta', [company.company_type, company.city, company.country].filter(Boolean).join(' · ') || 'Details not provided'));
+    info.append(element('div', 'company', known(company.name)));
+    info.append(element('div', 'meta', [company.company_type, company.city, company.country].map(known).join(' · ')));
     if (company.description) info.append(element('div', 'meta', company.description));
-    const score = element('div', 'score', (company.intelligence ? scoreValue(company.intelligence.opportunity_score) : scoreValue(company.opportunity_score)) ?? '—');
+    const score = element('div', 'score', (company.intelligence ? scoreValue(company.intelligence.opportunity_score) : scoreValue(company.opportunity_score)) ?? 'Unknown');
     if(company.intelligence)info.append(element('div','meta',`${company.intelligence.action.action} · confidence ${company.intelligence.confidence}% · coverage ${company.intelligence.evidence_coverage}%`));
     score.append(element('small', '', 'OPPORTUNITY'));
     const intent = element('div', 'hide-mobile');
     const value = scoreValue(company.intelligence ? company.intelligence.buying_intent : company.buying_intent);
-    intent.append(element('span', 'badge', value === null ? 'Intent unknown' : `${value} intent`));
+    intent.append(element('span', 'badge', value === null ? 'Intent Unknown' : `${value} intent`));
     row.append(info, score, intent);
     fragment.append(row);
   });
   container.append(fragment);
 }
+let companiesRequest;
+let companiesVersion = 0;
 async function loadCompanies() {
+  companiesRequest?.abort();
+  const version = ++companiesVersion;
+  if (typeof clearPipelineCompanies === 'function') clearPipelineCompanies();
   container.setAttribute('aria-busy', 'true');
   container.replaceChildren(element('p', 'data-state', 'Loading companies…'));
   updateStats(null);
   const controller = new AbortController();
+  companiesRequest = controller;
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const response = await fetch('/api/companies', { signal: controller.signal, cache: 'no-store' });
     const data = await response.json();
     if (!response.ok || data.success !== true || !Array.isArray(data.companies) ||
       data.companies.some(c => !c || typeof c !== 'object' || Array.isArray(c))) throw new Error();
+    if (version !== companiesVersion) return;
     if(typeof setPipelineCompanies==='function')setPipelineCompanies(data.companies);else renderCompanies(data.companies);
     updateStats(data.companies);
   } catch {
+    if (version !== companiesVersion) return;
     const state = element('div', 'data-state');
     state.append(element('p', '', 'Companies could not be loaded. Please try again.'));
     const retry = element('button', 'action', 'Retry');
@@ -78,7 +86,7 @@ async function loadCompanies() {
     container.replaceChildren(state);
   } finally {
     clearTimeout(timer);
-    container.setAttribute('aria-busy', 'false');
+    if (version === companiesVersion) container.setAttribute('aria-busy', 'false');
   }
 }
 

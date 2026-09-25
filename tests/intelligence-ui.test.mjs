@@ -17,3 +17,21 @@ test('dossier highlights supported contact and exposes claim source',async()=>{c
 test('country, type, opportunity, intent and contact filters compose',async()=>{const {context,get}=setup();await tick();context.rows=[{name:'A',country:'Belgium',company_type:'Importer',intelligence:{opportunity_score:80,buying_intent:70,has_decision_maker:true}},{name:'B',country:'France',company_type:'Importer',intelligence:{opportunity_score:90,buying_intent:80,has_decision_maker:true}},{name:'C',country:'Belgium',company_type:'Importer',intelligence:{opportunity_score:null,buying_intent:null}}];const r=vm.runInContext("filteredCompanies(rows,{country:'Belgium',type:'Importer',score:60,intent:50,contact:true})",context);assert.equal(r.map(c=>c.name).join(','),'A');});
 test('recent signals and freshness sorting retain unknown last',async()=>{const {context}=setup();await tick();context.rows=[{name:'A',intelligence:{last_researched_at:'2026-01-01',has_recent_signal:true}},{name:'B',intelligence:{last_researched_at:null}},{name:'C',intelligence:{last_researched_at:'2026-09-01',has_recent_signal:true}}];assert.equal(vm.runInContext("filteredCompanies(rows,{sort:'researched'}).map(c=>c.name).join(',')",context),'C,A,B');assert.equal(vm.runInContext("filteredCompanies(rows,{recent:true}).length",context),2);});
 test('filter changes render explicit empty result and preserve total',async()=>{const {context,get}=setup();await tick();context.rows=[{name:'A',country:'Belgium',opportunity_score:20}];vm.runInContext('setPipelineCompanies(rows)',context);get('filterScore').value='80';vm.runInContext('applyPipelineFilters()',context);assert.match(text(get('prospects')),/No companies match/);assert.equal(get('filterCount').textContent,'0 of 1 companies');});
+
+test('stored buying intent sorts correctly without optional research', async () => {
+ const {context}=setup();await tick();
+ context.rows=[{name:'A',buying_intent:null},{name:'B',buying_intent:0},{name:'C',buying_intent:80}];
+ assert.equal(vm.runInContext("filteredCompanies(rows,{sort:'intent'}).map(c=>c.name).join(',')",context),'C,B,A');
+});
+
+test('filter changes cannot resurrect stale companies after a failed reload', async () => {
+ const {context,get}=setup();await tick();
+ context.rows=[{name:'Old company',country:'Belgium'}];
+ vm.runInContext('setPipelineCompanies(rows)',context);
+ context.fetch=async()=>{throw Error('offline');};
+ await vm.runInContext('loadCompanies()',context);
+ vm.runInContext('applyPipelineFilters()',context);
+ assert.match(text(get('prospects')),/could not be loaded/);
+ assert.doesNotMatch(text(get('prospects')),/Old company/);
+ assert.equal(get('filterCount').textContent,'');
+});
