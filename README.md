@@ -106,10 +106,17 @@ Targeted checks (no new prospect research or scoring calibration):
 node --test tests/companies.test.mjs tests/dashboard.test.mjs tests/intelligence-ui.test.mjs tests/company.test.mjs tests/signals.test.mjs tests/search-ui.test.mjs
 ```
 
-Infrastructure observation on 2026-09-25: the supplied project
-`elpazsfbzljmiplazrmg` was INACTIVE and was resumed. After it resumed, a read-only
-catalog query found no public tables and selecting `public.companies` returned
-42P01. The earlier migration/deployment notes above describe a previous release,
-not a verification of the current database. Confirm the project containing the
-existing data or restore its backup before expecting real companies. Do not create
-placeholder prospects or rerun the research migrations against an unknown schema.
+Infrastructure verification on 2026-09-25: the supplied project
+`elpazsfbzljmiplazrmg` was resumed from INACTIVE. An early catalog query during
+restoration showed no public tables; after restoration completed, all seven
+application tables and the search RPC functions were present. No database rebuild
+or data recovery is needed. The production domain is
+https://wine-sales-engine.vercel.app (individual deployment URLs require Vercel
+SSO). The production companies API returned 10 stored companies, and the search
+history API confirmed the existing Brave provider configuration.
+
+Search reliability: provider progress stays in memory during discovery and is
+persisted with final qualification (or sanitized failure metrics). This avoids
+one database round trip before every web query. Transient connection failures on
+GET and assignment-only PATCH requests retry once within the existing search
+deadline. POST transaction RPCs and HTTP errors are never automatically replayed.
