@@ -2,6 +2,10 @@
 
 Commercial prioritization for wine and spirits. Vanilla HTML/CSS/JS → Vercel Node functions → bounded research provider → Supabase/PostgreSQL. No framework migration, runtime dependencies, LLM scoring, outbound messaging or billing.
 
+## Autonomous commercial workspace
+
+Daily bounded campaigns, operator-protected access, private follow-ups, a priority worklist and evidence-guided French/English approach drafts. Read the [activation and operating guide](docs/autonomy.md). Existing research and scoring rules are retained; no email is sent automatically.
+
 ## Commercial intelligence release
 
 Quick Search and New Search run multilingual Brave discovery, cluster first-party sources, verify identity/geography/channel, analyse portfolio and capacity, extract dated signals and public contacts, calculate explainable scores, import atomically and refresh the pipeline.
@@ -46,11 +50,11 @@ Versioned migrations are in `supabase/migrations/` and have been applied to the 
 
 The intelligence migration adds a bounded company `research_profile`, nullable `last_researched_at`, `search_companies` links and private `company_reviews`. Existing source summaries are marked legacy without asserting fresh research. Original company fields, scores, contacts and signals are preserved. New cache/import helpers retain SECURITY INVOKER, fixed search_path and service-role-only execution. A partial cache index supports identical completed searches; existing domain/name/contact/signal indexes are reused. A second migration aligns SQL domain/name normalization for tracking queries and uppercase accents, rebuilding its existing expression indexes.
 
-Private ratings, notes and commercial statuses have no public read/write API. Authenticated editing is deliberately deferred. Existing RLS remains enabled; no anon/authenticated policies are added. The security advisor's informational “RLS enabled, no policy” notices reflect this default-deny architecture.
+Private ratings, notes, commercial statuses and follow-up dates are available only through the authenticated operator workspace. Existing RLS remains enabled; no anon/authenticated policies are added. The security advisor's informational “RLS enabled, no policy” notices reflect this default-deny architecture.
 
 ## Security boundary
 
-The dashboard and read APIs remain public, including selected commercial contact information. Server APIs use the service role; RLS is not user authentication. Protect the deployment if the data should be private. Origin checks block cross-site browser POSTs; they do not authenticate direct clients. Rate and concurrency limits bound spending but cannot establish user identity.
+The dashboard and read APIs require an operator session when WSE_OPERATOR_KEY is configured; until then existing read APIs retain their prior public access. New workspace controls always require an operator session. Server APIs use the service role; RLS is not user authentication. Protect the deployment if the data should be private. Origin checks block cross-site browser POSTs; they do not authenticate direct clients. Rate and concurrency limits bound spending but cannot establish user identity.
 
 Research only fetches the fixed Brave HTTPS endpoint, never a candidate URL. Redirects are forbidden; provider responses capped at 512 KB, database responses at 1.5 MB; explicit timeouts and allowed methods apply. No SQL/URL proxy, secrets in client assets, raw upstream errors or stack traces. Untrusted text uses DOM/textContent and validated HTTP(S) source links. A future crawler requires DNS/private-IP validation and redirect revalidation before fetching websites.
 
@@ -79,7 +83,7 @@ Automated checks cover discovery, classification, trust, recency boundaries, con
 
 ## Next
 
-Activate and evaluate Brave against real Belgian accounts, improve source/entity attribution from observed rejections, then add authenticated commercial review for score calibration. Durable jobs, crawling, richer language extraction, CRM/outreach, billing and tenancy remain future work.
+Use bounded campaigns on the four supported markets and review evidence quality with Gensac commercial feedback. Durable jobs, crawling, richer language extraction, CRM/outreach, billing and tenancy remain future work.
 
 ## Companies compatibility fix (2026-09-25)
 

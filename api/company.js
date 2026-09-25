@@ -1,3 +1,4 @@
+import {operatorConfigured,isOperator} from '../lib/operator.js';
 import {analyse} from '../lib/intelligence/analyse.js';
 import {boundedJSON} from '../lib/http.js';
 // Only fields used by this dashboard are exposed by this public, read-only route.
@@ -11,6 +12,7 @@ export default async function handler(req, res) {
   const fail = (status, code, message) => res.status(status).json({
     success: false, error: { code, message }
   });
+  if (operatorConfigured() && !isOperator(req)) return fail(401, 'UNAUTHORIZED', 'Operator access is required.');
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return fail(405, 'METHOD_NOT_ALLOWED', 'Use GET to retrieve companies.');

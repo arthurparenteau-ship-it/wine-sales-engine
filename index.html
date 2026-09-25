@@ -16,11 +16,11 @@
       </div>
     </div>
     <nav>
-      <a class="active" href="#"><span>⌂</span> Dashboard</a>
-      <a href="#"><span>◎</span> Prospects</a>
-      <a href="#"><span>✦</span> Searches</a>
-      <a href="#"><span>✉</span> Outreach</a>
-      <a href="#"><span>◌</span> Signals</a>
+      <a class="active" href="#dashboard"><span>⌂</span> Dashboard</a>
+      <a href="#pipeline"><span>◎</span> Prospects</a>
+      <a href="#campaigns"><span>✦</span> Searches</a>
+      <a href="#today"><span>✉</span> Outreach</a>
+      <a href="#signals"><span>◌</span> Signals</a>
     </nav>
     <div class="sidebar-bottom">
       <div class="estate-card">
@@ -28,18 +28,18 @@
         <strong>Château de Gensac</strong>
         <span>Gers · France</span>
       </div>
-      <a href="#"><span>⚙</span> Settings</a>
+      <a href="#operatorPanel"><span>⚙</span> Settings</a>
     </div>
   </aside>
 
-  <main class="main">
+  <main class="main" id="dashboard">
     <header class="topbar">
       <div>
         <div class="eyebrow">COMMERCIAL INTELLIGENCE</div>
         <h1>Good morning, Arthur.</h1>
       </div>
       <div class="top-actions">
-        <button class="icon-btn">⌕</button>
+        <button class="action" id="operatorToggle">Operator access</button>
         <div class="avatar">AP</div>
       </div>
     </header>
@@ -60,7 +60,34 @@
       <div class="stat"><span>Avg. opportunity</span><strong><b id="averageScore">—</b><span>/100</span></strong><small>Average of research scores</small></div>
     </section>
 
-    <section class="content-grid">
+    <section class="panel command-center" id="today">
+      <div class="panel-head"><div><div class="eyebrow">YOUR COMMERCIAL WORKSPACE</div><h3>Today’s priorities</h3></div><button class="action" id="exportCompanies">Export CSV</button></div>
+      <p class="detail-note">Follow-ups first, then evidence-backed opportunities. Open a dossier to prepare an approach and record your next action.</p>
+      <div id="priorityList" class="priority-grid" aria-live="polite">Loading priorities…</div>
+    </section>
+    <section class="panel operator-panel hidden" id="operatorPanel">
+      <div class="panel-head"><div><div class="eyebrow">PRIVATE CONTROLS</div><h3>Operator access</h3></div></div>
+      <p class="detail-note" id="operatorState">Checking access…</p>
+      <form id="operatorLogin"><label>Operator key<input type="password" id="operatorKey" autocomplete="current-password" maxlength="256" required></label><button class="primary" type="submit">Unlock workspace</button></form>
+      <button class="action hidden" id="operatorLogout">Lock workspace</button>
+    </section>
+    <section class="panel campaign-panel" id="campaigns">
+      <div class="panel-head"><div><div class="eyebrow">SUPERVISED AUTOPILOT</div><h3>Research campaigns</h3></div><button class="action" id="refreshWorkspace">Refresh</button></div>
+      <p class="detail-note" id="automationState">Checking automation…</p>
+      <div id="workspaceLocked" class="data-state">Unlock operator access to manage campaigns and private follow-ups.</div>
+      <div id="workspacePrivate" class="hidden">
+        <form id="campaignForm" class="campaign-form">
+          <label>Campaign name<input id="campaignName" maxlength="80" value="Gensac · European buyers" required></label>
+          <fieldset><legend>Markets to rotate</legend><label class="check-label"><input type="checkbox" name="campaignMarket" value="Belgium" checked>Belgium</label><label class="check-label"><input type="checkbox" name="campaignMarket" value="France" checked>France</label><label class="check-label"><input type="checkbox" name="campaignMarket" value="United Kingdom" checked>United Kingdom</label><label class="check-label"><input type="checkbox" name="campaignMarket" value="Switzerland" checked>Switzerland</label></fieldset>
+          <div class="form-grid"><label>Prospect type<select id="campaignType"><option>Importer / Distributor</option><option>Premium Caviste</option><option>Restaurant</option><option>Spirits Buyer</option></select></label><label>Products<select id="campaignProduct"><option>Wine + Armagnac</option><option>Wine</option><option>Armagnac</option></select></label><label>Maximum research runs<input type="number" min="1" max="60" id="campaignBudget" value="12" required></label></div>
+          <p class="detail-note">One scheduled segment per day across all campaigns, up to 7 web queries per run. Pauses after 3 failures. No messages are sent.</p>
+          <button class="primary" type="submit">Create paused campaign</button>
+        </form>
+        <div id="campaignList"></div><details class="search-details"><summary>Execution history</summary><div id="campaignRuns"></div></details>
+      </div>
+      <p id="workspaceMessage" role="status" aria-live="polite"></p>
+    </section>
+    <section class="content-grid" id="pipeline">
       <div class="panel">
         <div class="panel-head">
           <div>
@@ -81,7 +108,7 @@
         <div id="prospects" role="status" aria-live="polite" aria-busy="true"><p class="data-state">Loading companies…</p></div>
       </div>
 
-      <div class="panel signals-panel">
+      <div class="panel signals-panel" id="signals">
         <div class="panel-head">
           <div>
             <div class="eyebrow">LIVE SIGNALS</div>
@@ -151,5 +178,6 @@
   <script src="public-js/filters.js"></script>
   <script src="app.js"></script>
   <script src="public-js/search.js"></script>
+  <script src="public-js/workspace.js"></script>
 </body>
 </html>
