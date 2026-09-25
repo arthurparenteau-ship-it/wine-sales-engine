@@ -80,3 +80,36 @@ Automated checks cover discovery, classification, trust, recency boundaries, con
 ## Next
 
 Activate and evaluate Brave against real Belgian accounts, improve source/entity attribution from observed rejections, then add authenticated commercial review for score calibration. Durable jobs, crawling, richer language extraction, CRM/outreach, billing and tenancy remain future work.
+
+## Companies compatibility fix (2026-09-25)
+
+The existing dashboard already fetches `/api/companies`; no demo fallback is used.
+The route now supports the original `companies` columns without requiring research
+columns or the contacts relationship: recognized missing-schema errors retry once
+using only the original allowlisted fields. Other failures remain errors. Stored
+scores are used when no research evidence exists; nulls stay null in JSON and are
+shown as Unknown in company rows. Research with evidence retains its existing
+assessment logic. Reloading clears the filter cache, and stale requests cannot
+replace newer results. No scoring rules or database records are changed.
+
+Vercel: keep the existing vanilla/static project rooted at this repository, with
+Node 22+ and `api/` functions; no build command or frontend Supabase dependency is
+needed. Keep `SUPABASE_URL` and `SUPABASE_SECRET_KEY` server-side. Production-only
+variables are not available in Preview: configure the matching Preview environment
+if testing a branch deployment, then redeploy. Never copy the key into this README
+or into client files. See [Vercel Node functions](https://vercel.com/docs/functions/runtimes/node-js)
+and [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys).
+
+Targeted checks (no new prospect research or scoring calibration):
+
+```
+node --test tests/companies.test.mjs tests/dashboard.test.mjs tests/intelligence-ui.test.mjs tests/company.test.mjs tests/signals.test.mjs tests/search-ui.test.mjs
+```
+
+Infrastructure observation on 2026-09-25: the supplied project
+`elpazsfbzljmiplazrmg` was INACTIVE and was resumed. After it resumed, a read-only
+catalog query found no public tables and selecting `public.companies` returned
+42P01. The earlier migration/deployment notes above describe a previous release,
+not a verification of the current database. Confirm the project containing the
+existing data or restore its backup before expecting real companies. Do not create
+placeholder prospects or rerun the research migrations against an unknown schema.

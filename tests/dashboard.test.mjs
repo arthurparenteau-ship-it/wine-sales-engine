@@ -104,3 +104,25 @@ test('live signal count is independent of visible rows; click opens its dossier 
  context.fetch=async url=>{called=url;return Response.json({success:true,company:{id:'signal-company',name:'Merchant'},contacts:[],signals:[]});};
  item.click();await tick();assert.equal(called,'/api/company?id=signal-company');assert.equal(nodes.get('prospectDrawer').open,true);
 });
+
+test('missing and malformed scores stay Unknown while zero is preserved', async () => {
+  const {context,nodes} = setup(async () => Response.json({success:true,companies:[{}]}));
+  await tick();
+  assert.match(textOf(nodes.get('prospects')), /Unknown/);
+  for (const value of [null, '', '   ', [], {}, false, -1, 101]) {
+    context.value = value;
+    assert.equal(vm.runInContext('scoreValue(value)', context), null);
+  }
+  assert.equal(vm.runInContext('scoreValue(0)', context), 0);
+});
+
+test('a stale companies response cannot replace the latest load', async () => {
+  let first;
+  const {context,nodes} = setup(() => new Promise(resolve => first = resolve));
+  context.fetch = async () => Response.json({success:true,companies:[{name:'Latest'}]});
+  await vm.runInContext('loadCompanies()', context);
+  first(Response.json({success:true,companies:[{name:'Stale'}]}));
+  await tick();
+  assert.match(textOf(nodes.get('prospects')), /Latest/);
+  assert.doesNotMatch(textOf(nodes.get('prospects')), /Stale/);
+});

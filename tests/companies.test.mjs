@@ -52,6 +52,38 @@ test('companies endpoint contract and safe failures', async t => {
     assert.equal(res.body.count, 2);
     assert.equal(res.body.companies[0].internal_secret, undefined);
   });
+  for (const code of ['42703', 'PGRST200', 'PGRST204', 'PGRST205']) {
+    await t.test(`MVP schema fallback for ${code}`, async () => {
+      let calls = 0;
+      globalThis.fetch = async url => {
+        calls++;
+        if (calls === 1) return Response.json({code, message:'private upstream details'}, {status:400});
+        assert.ok(!url.searchParams.get('select').includes('research_profile'));
+        assert.ok(!url.searchParams.get('select').includes('contacts('));
+        return Response.json(calls === 2 ? [{id:'real-row',name:'Stored company',opportunity_score:0,buying_intent:null,website:'https://example.com',internal_secret:'private'}] : []);
+      };
+      const res = await invoke();
+      assert.equal(res.statusCode,200);
+      assert.equal(res.body.count,1);
+      assert.equal(res.body.companies[0].opportunity_score,0);
+      assert.equal(res.body.companies[0].buying_intent,null);
+      assert.equal(res.body.companies[0].website,'https://example.com');
+      assert.equal(res.body.companies[0].intelligence,undefined);
+      assert.equal(res.body.companies[0].internal_secret,undefined);
+      assert.equal(calls,3);
+    });
+  }
+  await t.test('unrelated query failures do not silently fall back', async () => {
+    let calls=0;
+    globalThis.fetch=async()=>{calls++;return Response.json({code:'42501',message:'private'},{status:400});};
+    const res=await invoke();assert.equal(res.statusCode,502);assert.equal(calls,1);
+    assert.ok(!JSON.stringify(res.body).includes('private'));
+  });
+  await t.test('missing base table still fails after one fallback', async () => {
+    let calls=0;
+    globalThis.fetch=async()=>{calls++;return Response.json({code:'PGRST205'},{status:404});};
+    assert.equal((await invoke()).statusCode,502);assert.equal(calls,2);
+  });
   for (const status of [401,403,429,500]) {
     await t.test(`upstream ${status} is sanitized`, async () => {
       globalThis.fetch = async () => new Response('sb_secret_should_never_escape', {status});
