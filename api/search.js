@@ -1,3 +1,4 @@
+import {operatorConfigured,requireOperator,internalSearch} from '../lib/operator.js';
 import {database} from '../lib/db.js';
 import {AppError,failure,headers,log,messages} from '../lib/http.js';
 import {guardPost,validateInput,uuid} from '../lib/search-input.js';
@@ -9,6 +10,7 @@ export default async function handler(req,res) {
   let db,search;const startedAt=Date.now();
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),35000);
   try {
+    if(operatorConfigured() && req[internalSearch]!==true)requireOperator(req);
     if(req.method==='GET') {
       if(!uuid(req.query?.id))throw new AppError('INVALID_ID',400);
       db=database(); await db.rpc('wse_expire_searches',{});

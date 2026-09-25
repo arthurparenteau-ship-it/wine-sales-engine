@@ -61,6 +61,7 @@ let companiesVersion = 0;
 async function loadCompanies() {
   companiesRequest?.abort();
   const version = ++companiesVersion;
+  if(typeof refreshWorkspacePriorities==='function')refreshWorkspacePriorities([]);
   if (typeof clearPipelineCompanies === 'function') clearPipelineCompanies();
   container.setAttribute('aria-busy', 'true');
   container.replaceChildren(element('p', 'data-state', 'Loading companies…'));
@@ -76,6 +77,7 @@ async function loadCompanies() {
     if (version !== companiesVersion) return;
     if(typeof setPipelineCompanies==='function')setPipelineCompanies(data.companies);else renderCompanies(data.companies);
     updateStats(data.companies);
+    if(typeof refreshWorkspacePriorities==='function')refreshWorkspacePriorities(data.companies);
   } catch {
     if (version !== companiesVersion) return;
     const state = element('div', 'data-state');
@@ -202,7 +204,10 @@ function detailSection(title) {
   return section;
 }
 function renderDetail(data) {
-  if(typeof renderIntelligence==='function' && renderIntelligence(data))return;
+  if(typeof renderIntelligence==='function' && renderIntelligence(data)){
+    if(typeof renderCommercialTools==='function')renderCommercialTools(data);
+    return;
+  }
   const {company,contacts,signals}=data;
   detailTitle.textContent = known(company.name);
   detailBody.replaceChildren();

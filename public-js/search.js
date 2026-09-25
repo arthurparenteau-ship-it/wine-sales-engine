@@ -3,7 +3,7 @@
   const status=document.getElementById('searchStatus');
   const history=document.getElementById('recentSearches');
   let busy=false, lastInput, lastRequest, pollTimer;
-  const failureText={PROVIDER_UNAVAILABLE:'Provider unavailable. Configure the server research provider before retrying.',
+  const failureText={UNAUTHORIZED:'Unlock operator access to start research.',PROVIDER_UNAVAILABLE:'Provider unavailable. Configure the server research provider before retrying.',
     TIMEOUT:'Research timed out. Retry the search.',SEARCH_EXPIRED:'Search was interrupted. Retry the search.',
     PROVIDER_FAILED:'The research provider failed. Please retry.',DATABASE_UNAVAILABLE:'Database unavailable. Please retry.',
     SEARCH_BUSY:'Another search is running. Please wait.',RATE_LIMITED:'Search limit reached. Try again later.'};

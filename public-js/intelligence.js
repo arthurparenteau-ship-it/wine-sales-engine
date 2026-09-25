@@ -43,6 +43,6 @@ function renderIntelligence(data) {
  i.evidence.forEach(e=>{const group=e.signal_type?'Signals':/portfolio|catalog|armagnac|wine|vins/i.test(e.source_url)?'Portfolio':'Company';groups[group].push(e);});
  i.contacts.forEach(c=>groups.Contacts.push({source_url:c.source,quote:c.full_name+' · '+c.job_title,type:'contact_record',tier:'Recorded'}));
  Object.entries(groups).forEach(([group,rows])=>{if(!rows.length)return;const details=element('details','evidence-group');details.append(element('summary','',`${group} (${rows.length})`));rows.slice(0,12).forEach(e=>{const p=element('p','detail-note',`${e.quote} · ${e.type||'Stored evidence'} · ${e.tier}${e.legacy?' · Stored summary':''} `);sourceLink(p,e.source_url);details.append(p);});sources.append(details);});
- const feedback=detailSection('Commercial review');feedback.append(element('p','detail-note','Status and private feedback editing will become available with authenticated access. No public edits are enabled.'));
+
  return true;
 }
