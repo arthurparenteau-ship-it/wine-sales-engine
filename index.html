@@ -17,6 +17,7 @@
     </div>
     <nav>
       <a class="active" href="#dashboard"><span>⌂</span> Dashboard</a>
+      <a href="#webResearch"><span>⌕</span> Worldwide search</a>
       <a href="#pipeline"><span>◎</span> Prospects</a>
       <a href="#campaigns"><span>✦</span> Searches</a>
       <a href="#today"><span>✉</span> Outreach</a>
@@ -50,7 +51,25 @@
         <h2>Find the buyers<br><em>worth your time.</em></h2>
         <p>Discover, qualify and prioritize wine & spirits prospects using commercial fit, buying intent and market signals.</p>
       </div>
-      <button class="primary" id="newSearch">＋ New search</button>
+      <div class="hero-actions"><a class="primary" href="#webResearch">⌕ Search the world</a><button class="action" id="newSearch">Qualify wine prospects</button></div>
+    </section>
+
+    <section class="panel web-panel" id="webResearch">
+      <div class="panel-head"><div><div class="eyebrow">EXPLORE THE PUBLIC WEB</div><h3>Worldwide web search</h3></div><span class="badge" id="webProvider">Checking search engine…</span></div>
+      <p class="detail-note">Search any topic, company or buyer, anywhere in the world. Open the original sources to verify what you find.</p>
+      <form id="webSearchForm">
+        <div class="web-query-row"><label>What are you looking for?<input id="webQuery" type="search" maxlength="400" placeholder="Wine importers in Tokyo, hotels in Kenya, market reports…" required></label><button class="primary" id="webSubmit" type="submit">Search the web</button></div>
+        <details class="web-options"><summary>Location, language &amp; date</summary><div class="form-grid">
+          <label>Country or city keywords (optional)<input id="webLocation" maxlength="100" placeholder="Anywhere · e.g. Japan, São Paulo, Nairobi"></label>
+          <label>Result language<select id="webLanguage"><option value="en">English</option><option value="fr">Français</option><option value="es">Español</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="pt-br">Português · Brasil</option><option value="pt-pt">Português · Portugal</option><option value="nl">Nederlands</option><option value="ja">日本語</option><option value="ko">한국어</option><option value="zh-hans">简体中文</option><option value="zh-hant">繁體中文</option><option value="ar">العربية</option><option value="hi">हिन्दी</option><option value="ru">Русский</option><option value="uk">Українська</option><option value="pl">Polski</option><option value="tr">Türkçe</option><option value="sv">Svenska</option><option value="da">Dansk</option><option value="fi">Suomi</option><option value="nb">Norsk</option><option value="vi">Tiếng Việt</option><option value="id">Bahasa Indonesia</option><option value="th">ไทย</option></select></label>
+          <label>Page freshness<select id="webFreshness"><option value="">Any time</option><option value="pd">Past 24 hours</option><option value="pw">Past week</option><option value="pm">Past month</option><option value="py">Past year</option></select></label>
+        </div><p class="detail-note">Location adds keywords to your query; it does not certify where a business is based. Use the local language for broader local coverage. Supports quotes, site: and filetype: operators.</p></details>
+      </form>
+      <div class="web-examples"><span>Try:</span><button type="button" class="action" id="webExampleJapan">Wine importers · Japan</button><button type="button" class="action" id="webExampleKenya">Luxury hotels · Kenya</button><button type="button" class="action" id="webExampleMexico">Armagnac distributors · Mexico</button></div>
+      <p id="webSearchStatus" class="detail-note" role="status" aria-live="polite">Public web results appear here. They are not automatically added to your qualified prospect pipeline.</p>
+      <div id="webResults" class="web-results" aria-busy="false"></div>
+      <button type="button" class="action hidden" id="webMore">Load more results</button>
+      <p class="muted">Up to 20 results per page and 10 pages per query. Shared allowance: 100 page requests per 24 hours. Coverage depends on the search index; private or unindexed information is unavailable.</p>
     </section>
 
     <section class="stats">
@@ -124,9 +143,10 @@
         <div class="panel-head">
           <div>
             <div class="eyebrow">QUICK SEARCH</div>
-            <h3>Build a prospect list</h3>
+            <h3>Qualify wine &amp; spirits prospects</h3>
           </div>
         </div>
+        <p class="detail-note">Automatic qualification covers the four markets below. Use Worldwide web search for any other country or topic.</p>
         <div class="form-grid">
           <label>Market<select id="market"><option>Belgium</option><option>France</option><option>United Kingdom</option><option>Switzerland</option></select></label>
           <label>Prospect type<select id="type"><option>Importer / Distributor</option><option>Premium Caviste</option><option>Restaurant</option><option>Spirits Buyer</option></select></label>
@@ -179,5 +199,6 @@
   <script src="app.js"></script>
   <script src="public-js/search.js"></script>
   <script src="public-js/workspace.js"></script>
+  <script src="public-js/web-search.js"></script>
 </body>
 </html>

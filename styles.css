@@ -44,6 +44,10 @@ body:has(.prospect-drawer[open]){overflow:hidden}
 
 @media(max-width:650px){.assessment-metrics .detail-field:last-child{grid-column:1/-1}.assessment-metrics .detail-field:last-child dd{font-size:17px;line-height:1.5}}
 
+.hero-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px;flex-shrink:0;margin-left:20px}.hero-actions a{text-decoration:none;text-align:center;font-size:14px}.hero-actions .action{background:transparent;color:#eee;border-color:#5d6050}
+.web-panel{margin-top:18px;border-top:3px solid var(--gold)}.web-panel .panel-head{gap:12px;flex-wrap:wrap}.web-query-row{display:flex;gap:12px;align-items:flex-end}.web-query-row label{flex:1;min-width:0}.web-query-row input{font-size:15px}.web-query-row .primary{flex-shrink:0}.web-options{margin-top:16px}.web-options summary{cursor:pointer;font-size:12px;color:var(--accent)}.web-options .form-grid{margin-top:14px}.web-examples{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:18px}.web-examples>span{font-size:11px;color:var(--muted)}.web-result{padding:20px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}.web-domain{font-size:11px;color:var(--accent);margin:0 0 7px}.web-title{font-size:17px;font-weight:600;color:var(--ink);text-decoration:none}.web-title:hover{text-decoration:underline}.web-excerpt{font-size:13px;line-height:1.7;color:var(--muted);margin:8px 0}.web-result .detail-note{font-size:10px;margin:0}#webMore{margin:16px 0}
+@media(max-width:650px){.web-query-row{display:block}.web-query-row .primary{width:100%;margin-top:12px}.hero-actions{margin:20px 0 0}.hero .hero-actions .primary{margin:0}.web-panel{padding:18px}.web-title{font-size:15px}}
+
 /* Commercial workspace: keeps the existing estate palette and typography. */
 html{scroll-behavior:smooth;scroll-padding-top:24px}.hidden{display:none!important}
 .command-center,.campaign-panel,.operator-panel{margin-top:18px}.command-center{border-top:3px solid var(--gold)}
