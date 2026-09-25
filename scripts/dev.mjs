@@ -1,4 +1,5 @@
 import operator from '../api/operator.js';
+import webSearch from '../api/web-search.js';
 import workspace from '../api/workspace.js';
 import cron from '../api/cron.js';
 import brief from '../api/brief.js';
@@ -10,8 +11,8 @@ import company from '../api/company.js';
 import signals from '../api/signals.js';
 import search from '../api/search.js';
 import searches from '../api/searches.js';
-const routes={'/api/operator':operator,'/api/workspace':workspace,'/api/cron':cron,'/api/brief':brief,'/api/companies':companies,'/api/company':company,'/api/signals':signals,'/api/search':search,'/api/searches':searches};
-const assets={'/public-js/workspace.js':['public-js/workspace.js','text/javascript'],'/public-js/intelligence.js':['public-js/intelligence.js','text/javascript'],'/public-js/filters.js':['public-js/filters.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/app.js':['app.js','text/javascript'],'/styles.css':['styles.css','text/css'],'/public-js/search.js':['public-js/search.js','text/javascript']};
+const routes={'/api/web-search':webSearch,'/api/operator':operator,'/api/workspace':workspace,'/api/cron':cron,'/api/brief':brief,'/api/companies':companies,'/api/company':company,'/api/signals':signals,'/api/search':search,'/api/searches':searches};
+const assets={'/public-js/web-search.js':['public-js/web-search.js','text/javascript'],'/public-js/workspace.js':['public-js/workspace.js','text/javascript'],'/public-js/intelligence.js':['public-js/intelligence.js','text/javascript'],'/public-js/filters.js':['public-js/filters.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/app.js':['app.js','text/javascript'],'/styles.css':['styles.css','text/css'],'/public-js/search.js':['public-js/search.js','text/javascript']};
 http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://localhost');
   res.status=n=>{res.statusCode=n;return res;};res.json=data=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(data));};

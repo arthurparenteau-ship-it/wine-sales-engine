@@ -1,8 +1,9 @@
 {
   "functions": {
-    "api/search.js": { "maxDuration": 60 },
-    "api/workspace.js": { "maxDuration": 60 },
-    "api/cron.js": { "maxDuration": 60 }
+    "api/search.js": {"maxDuration": 60},
+    "api/workspace.js": {"maxDuration": 60},
+    "api/cron.js": {"maxDuration": 60},
+    "api/web-search.js": {"maxDuration": 30}
   },
-  "crons": [{ "path": "/api/cron", "schedule": "0 7 * * *" }]
+  "crons": [{"path": "/api/cron", "schedule": "0 7 * * *"}]
 }

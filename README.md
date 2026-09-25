@@ -2,6 +2,20 @@
 
 Commercial prioritization for wine and spirits. Vanilla HTML/CSS/JS → Vercel Node functions → bounded research provider → Supabase/PostgreSQL. No framework migration, runtime dependencies, LLM scoring, outbound messaging or billing.
 
+## Worldwide web search
+
+Use **Search the world** for any topic or location. The existing Brave Search subscription powers a server-side `/api/web-search` route with free query text, location keywords, 25 language choices, date filters, direct source links and up to ten pages of twenty results. Search operators such as `site:` and `filetype:` are supported. No additional API key is needed.
+
+Apply `supabase/migrations/20260925100835_worldwide_web_search.sql` before deployment. Its private request ledger enforces a shared 100-page budget per rolling 24 hours, 20/minute and one/second across serverless instances; each attempt reserves one slot before calling Brave. Replaying a request ID is rejected for seven days. An interrupted request can be retried with a new ID, consuming a new slot. Only IDs and timestamps are retained; search text and results are not persisted. No provider errors or credentials are logged or forwarded.
+
+The route inherits operator authentication when `WSE_OPERATOR_KEY` is configured; until then it follows the existing public search access model with the shared quota. The Brave subscription can impose additional limits. A failed quota check stops provider calls.
+
+This is exploration of the public indexed web, not exhaustive access to everything on Earth. Location is a query hint, not evidence of business location. Web results do not receive invented contact details or scores and are not imported into `companies`. The existing automatic qualification and campaign workflow still covers Belgium, France, United Kingdom and Switzerland. Missing metadata is shown as Unknown. No crawler, external messaging or new subscription is added.
+
+Validation: `node --test tests/web-search.test.mjs tests/web-search-ui.test.mjs`. Provider requests, Unicode/operator input, no-result/error states, pagination, duplicate suppression, quota-before-spend, authentication and safe rendering are tested. The migration was also exercised in isolated PostgreSQL for duplicate protection, rate/day budgets, expiry and service-role-only permissions.
+
+Reference: [Brave web search API](https://api-dashboard.search.brave.com/api-reference/web/search/get).
+
 ## Autonomous commercial workspace
 
 Daily bounded campaigns, operator-protected access, private follow-ups, a priority worklist and evidence-guided French/English approach drafts. Read the [activation and operating guide](docs/autonomy.md). Existing research and scoring rules are retained; no email is sent automatically.
